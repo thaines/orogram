@@ -89,6 +89,10 @@ print(f'  numerical integration = {model.crossentropynumint(model3):.6f}')
 print(f'  monte-carlo = {model.crossentropymc(model3):.6f}')
 print()
 
+print('KL-divergence, H(N(0,1), N(1,9)), different spacing:')
+print(f'  analytic = {model.kl(model3):.6f}')
+print()
+
 
 
 # Now do tests with a gap to make sure those code paths don't falter...

@@ -520,3 +520,8 @@ class RegOrogram:
     
     # Calculate cross-entropy...
     return -numpy.log(numpy.maximum(y, 1e-32)).mean()
+  
+  
+  def kl(self, q):
+    """Calculates the Kullback—Leibler divergence between two distributions, i.e. the expected extra nats needed for encoding data with the distrbution represented by this object when the encoder is optimised for the distribution of q, the first parameter to this method. Convenience method that uses the cross-entropy and entropy methods."""
+    return self.crossentropy(q) - self.entropy()
