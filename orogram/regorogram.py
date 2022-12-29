@@ -177,6 +177,11 @@ class RegOrogram:
     return self._high + 1
 
 
+  def center(self, i):
+    """Given the index of a bin converts it to the position of the centre of the bin. Obviously just a multiplication, but abstracted for consistency and to avoid mistakes. Vectorised."""
+    return numpy.asarray(i, dtype=numpy.float32) * self._spacing
+
+
   def weight(self, i):
     """Given the index of a bin (or many - vectorised) returns how much weight has landed in that bin. This is sort of the number of samples that have landed in that bin, noting that because it's triangular each sample gets split between adjacent bins."""
     if numpy.ndim(i)==0:
@@ -241,7 +246,7 @@ class RegOrogram:
   
   
   def modes(self):
-    """Returns an array containing the position of every mode. Pretty useless under default use, but becomes useful as bin spacing is reduced."""
+    """Returns an array containing the position of every mode. Pretty useless under default use, but becomes useful if bin spacing is made large enough to regularise."""
     ret = regorofun.modes(self._data, self._blocksize, self._low, self._high)
     return ret.astype(numpy.float32) * self._spacing
   
@@ -272,11 +277,6 @@ class RegOrogram:
     return best
   
   
-  def x(self, i):
-    """Given the index of a bin converts it to the position of the centre of the bin. Obviously just a multiplication, but abstracted for consistency and to avoid mistakes. Vectorised."""
-    return numpy.asarray(i, dtype=numpy.float32) * self._spacing
-  
-  
   def graph(self, start = None, end = None):
     """Returns two aligned vectors, as a conveniance function for generating the arrays to hand to a graph plotting function. Return is a tuple of (x, y), x being the bin center and y the probability. You can give the start and end bin if you want (inclusive, exclusive), but it defaults to the range of the observed data (going one wider so the end points have probability zero)."""
     if start is None:
@@ -286,7 +286,7 @@ class RegOrogram:
       end = self._high + 2
     
     i = numpy.arange(start, end)
-    retx = self.x(i)
+    retx = self.center(i)
     rety = self.prob(i)
     
     return retx, rety
@@ -307,7 +307,7 @@ class RegOrogram:
       # Inefficient version - go via add() to get interpolation...
       indices = numpy.arange(other._blocksize)
       for k, v in other._data.items():
-        x = other.x(k + indices)
+        x = other.center(k + indices)
         send = numpy.nonzero(v)
         self.add(x[send], v[send])
     
@@ -363,7 +363,7 @@ class RegOrogram:
       end = self._high + 2
     
     i = numpy.arange(start, end)
-    retx = self.x(i)
+    retx = self.center(i)
     rety = self.bincdf(i)
     
     return retx, rety
@@ -458,7 +458,7 @@ class RegOrogram:
     """Numerical integration version of entropy(); for testing only as obviously much slower. In nats."""
     
     # Evaluate across range of distribution...
-    x = numpy.linspace(self.x(self._low - 1), self.x(self._high + 2), samples)
+    x = numpy.linspace(self.center(self._low - 1), self.center(self._high + 2), samples)
     y = self(x)
     delta = x[1] - x[0]
     
@@ -495,7 +495,7 @@ class RegOrogram:
     """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses numerical integration and exists for testing only - slow."""
     
     # Evaluate p across range of self distribution...
-    x = numpy.linspace(self.x(self._low - 1), self.x(self._high + 2), samples)
+    x = numpy.linspace(self.center(self._low - 1), self.center(self._high + 2), samples)
     p = self(x)
     delta = x[1] - x[0]
     
