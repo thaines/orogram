@@ -4,8 +4,11 @@ import sys
 
 import numpy
 
-import pyximport
-pyximport.install(setup_args={'include_dirs': [numpy.get_include()]})
+try:
+  import pyximport
+  pyximport.install(setup_args={'include_dirs': [numpy.get_include()]})
+except:
+  pass
 
 try:
   from . import regorofun
