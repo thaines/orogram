@@ -148,6 +148,9 @@ class RegOrogram:
     density = numpy.empty(cummass.shape, dtype=numpy.float32)
     regorofun.mass2weight(between, density)
     
+    # cdf's often involve evaluating tricky transcendental functions, and numerical precision noise can dominate for tiny values, including taking it negative - clean that up...
+    density[density<1e-12] = 0.0
+    
     # Scale by weight...
     density *= weight
     

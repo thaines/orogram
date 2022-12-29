@@ -105,15 +105,15 @@ class Orogram:
     return numpy.interp(x, self._x, self._y, 0.0, 0.0)
   
   
-  def modes(self):
+  def modes(self, threshold = 1e-6):
     """Returns an array containing the position of every mode."""
-    keep = numpy.nonzero((self._y[:-2] < self._y[1:-1]) & (self._y[2:] < self._y[1:-1]))
+    keep = numpy.nonzero(((self._y[:-2] + threshold) < self._y[1:-1]) & ((self._y[2:] + threshold) < self._y[1:-1]))
     return self._x[keep[0] + 1]
 
 
-  def binmodes(self):
+  def binmodes(self, threshold = 1e-6):
     """Identical to modes() but returns the bin indices instead."""
-    keep = numpy.nonzero((self._y[:-2] < self._y[1:-1]) & (self._y[2:] < self._y[1:-1]))
+    keep = numpy.nonzero(((self._y[:-2] + threshold) < self._y[1:-1]) & ((self._y[2:] + threshold) < self._y[1:-1]))
     return keep[0] + 1
 
 
