@@ -137,7 +137,66 @@ class Orogram:
     rety.flags.writeable = False
     
     return retx, rety
+  
+  
+  @staticmethod
+  def _fetchx(orogram):
+    if isinstance(orogram, RegOrogram):
+      return ororam.center(numpy.arange(orogram._low-1, orogram._high+2))
+    
+    else:
+      return orogram._x
+  
+  
+  @staticmethod
+  def mixture(orograms, weights):
+    """Returns a new Orogram that is constructed as a mixture of orograms - inputs are a list of Orogram objects and a corresponding list of weights, matching up with each Orogram. Will handle any RegOrogram objects that are included. Note that the return value can have as many bin centers as all inputs combined (duplicates are merged), so doing this iteratively without some kind of simplification step is in general unwise."""
 
+    # Extract the list of bin centers...
+    centers = numpy.concatenate((Orogram._fetchx(og) for og in orograms))
+    
+    # Sort and dedup...
+    centers.sort(kind='mergesort')
+    
+    unique = numpy.ones(centers.shape, dtype=bool)
+    numpy.not_equal(centers[1:], centers[:-1], out=unique[1:])
+    centers = centers[unique]
+    
+    # Sample mixture at each center...
+    values = numpy.zeros(centers.shape, dtype=numpy.float32)
+    div = sum(weights)
+    
+    for og, w in zip(orograms, weights):
+      values += (w / div) * og(centers)
+    
+    # Construct and return object...
+    return Orogram(centers, values, norm=False, copy=False)
+  
+  
+  @staticmethod
+  def product(orograms):
+    """Returns a new Orogram that is constructed as a product of ororams - input is a list of Orogram objects; it is renormalised. It can raise a ZeroDivisionError exception if the intersection of probability mass is null. Will handle any RegOrogram objects that are included. Note that the return value can have as many bin centers as all inputs combined (duplicates are merged), so doing this iteratively without some kind of simplification step is in general unwise."""
+    
+    # Extract the list of bin centers...
+    centers = numpy.concatenate((Orogram._fetchx(og) for og in orograms))
+    
+    # Sort and dedup...
+    centers.sort(kind='mergesort')
+    
+    unique = numpy.ones(centers.shape, dtype=bool)
+    numpy.not_equal(centers[1:], centers[:-1], out=unique[1:])
+    centers = centers[unique]
+    
+    # Sample mixture at each center...
+    values = numpy.zeros(centers.shape, dtype=numpy.float32)
+    div = sum(weights)
+    
+    for og in orograms:
+      values *= og(centers)
+    
+    # Construct and return object...
+    return Orogram(centers, values, copy=False)
+  
 
   def cdf(self, x):
     """Evaluates the cdf at the given x. Vectorised."""
