@@ -4,6 +4,22 @@ import sys
 
 import numpy
 
+
+try:
+  import pyximport
+  pyximport.install(setup_args={'include_dirs': [numpy.get_include()]})
+
+except:
+  pass
+
+
+try:
+  from . import xentropy
+
+except ImportError:
+  import xentropy
+
+
 try:
   from .regorogram import RegOrogram
 except ImportError:
