@@ -269,3 +269,34 @@ class Orogram:
   def meanvar(self):
     """Returns a tuple containing (mean, variance)."""
     return mean(), var()
+
+
+  def entropy(self):
+    """Calculates the entropy analytically, in nats."""
+    return xentropy.irr_entropy(self._x, self._y)
+  
+  
+  def entropynumint(self, samples=1024*1024, threshold=1e-12):
+    """Numerical integration version of entropy(); for testing only as obviously much slower. In nats."""
+    
+    # Evaluate across range of distribution...
+    x = numpy.linspace(self._x[0], self._x[-1], samples)
+    y = self(x)
+    delta = x[1] - x[0]
+    
+    # Filter out the zeros - log gets very unhappy about them...
+    y = y[y>=threshold]
+    
+    # Entropy!..
+    return -delta * (y * numpy.log(y)).sum()
+  
+  
+  def entropymc(self, samples=1024*1024, threshold=1e-12, rng=None):
+    """Monte-Carlo integration version of entropy. Super slow of course so just for testing as it also doubles as a good sanity check of sampling. In nats."""
+    
+    # Draw and evaluate...
+    x = self.draw(samples, rng)
+    y = self(x)
+    
+    # Entropy!..
+    return -numpy.log(numpy.maximum(y, 1e-12)).mean()

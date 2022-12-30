@@ -22,7 +22,7 @@ cpdef float reg_entropy(float[:] prob, float spacing):
   
   for i in range(1, prob.shape[0]):
     
-    # Calculate the p*log(p) term for teh current value...
+    # Calculate the p*log(p) term for the current value...
     plogp = prob[i] * log(prob[i]) if prob[i]>1e-12 else 0.0
     
     # Do the safe bit...
@@ -32,6 +32,35 @@ cpdef float reg_entropy(float[:] prob, float spacing):
     pdelta = prob[i] - prob[i-1]
     if fabs(pdelta)>1e-12:
       ret -= 0.25 * spacing * (prob[i-1]*prob[i-1] - prob[i]*prob[i] + 2 * (prob[i-1]*plogp - prob[i]*plogp_last)) / pdelta
+    
+    # Move to next...
+    plogp_last = plogp
+  
+  return ret
+
+
+
+cpdef float irr_entropy(float[:] x, float[:] prob):
+  """Calculates entropy of an irregular orogram using the analytic equations I've derived."""
+  cdef int i
+  cdef float ret = 0.0
+  cdef float plogp_last, plogp, xdelta, pdelta
+
+  plogp_last = prob[0] * log(prob[0]) if prob[0]>1e-12 else 0.0
+  
+  for i in range(1, prob.shape[0]):
+    
+    # Calculate the p*log(p) term for the current value...
+    plogp = prob[i] * log(prob[i]) if prob[i]>1e-12 else 0.0
+    
+    # Do the safe bit...
+    xdelta = x[i] - x[i-1]
+    ret -= 0.5 * xdelta * (plogp_last + plogp)
+    
+    # Do the bit that might be unstable if the delta is too small...
+    pdelta = prob[i] - prob[i-1]
+    if fabs(pdelta)>1e-12:
+      ret -= 0.25 * xdelta * (prob[i-1]*prob[i-1] - prob[i]*prob[i] + 2 * (prob[i-1]*plogp - prob[i]*plogp_last)) / pdelta
     
     # Move to next...
     plogp_last = plogp
