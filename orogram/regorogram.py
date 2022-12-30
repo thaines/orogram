@@ -140,13 +140,13 @@ class RegOrogram:
       for i in range(cummass.shape[0]):
         cummass[i] = cdf(centers[i])
     
-    # Convert to mass between bin centers, renormalise...
+    # Convert to mass between bin centers, renormalise, then drop into bin centers - this does smooth slihtly, but avoids the instability of attempting to optimise directly...
     between = (cummass[1:] - cummass[:-1]).astype(numpy.float32)
     between /= between.sum()
     
-    # Solve for bin center quantities...
-    density = numpy.empty(cummass.shape, dtype=numpy.float32)
-    regorofun.mass2weight(between, density)
+    density = numpy.zeros(cummass.shape, dtype=numpy.float32)
+    density[:-1] += 0.5 * between
+    density[1:] += 0.5 * between
     
     # cdf's often involve evaluating tricky transcendental functions, and numerical precision noise can dominate for tiny values, including taking it negative - clean that up...
     density[density<1e-12] = 0.0

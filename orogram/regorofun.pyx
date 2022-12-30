@@ -131,18 +131,6 @@ cpdef void binadd(dic, long blocksize, long base, float[:] density):
 
 
 
-cpdef void mass2weight(float[:] between, float[:] out):
-  """Given the mass between bins calculates heights such that the mass is satisfed. Really this is a super simple linear equation solver for conveniantely narrow band matrices, with the implicit constraint that the first and last bin have a height of zero."""
-  cdef long i
-  
-  with nogil:
-    out[0] = 0.0
-    
-    for i in range(between.shape[0]):
-      out[i+1] = 2*between[i] - out[i]
-
-
-
 cpdef void binweight(dic, long blocksize, long[:] index, float[:] out):
   """Returns weights for a series of bin indices."""
   cdef long i, bi
