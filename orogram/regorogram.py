@@ -7,13 +7,17 @@ import numpy
 try:
   import pyximport
   pyximport.install(setup_args={'include_dirs': [numpy.get_include()]})
+
 except:
   pass
 
 try:
   from . import regorofun
+  from . import xentropy
+
 except ImportError:
   import regorofun
+  import xentropy
 
 
 
@@ -457,7 +461,7 @@ class RegOrogram:
     prob = self.prob(i)
     
     # Entropy!..
-    return regorofun.reg_entropy(prob, self._spacing)
+    return xentropy.reg_entropy(prob, self._spacing)
   
   
   def entropynumint(self, samples=1024*1024, threshold=1e-12):
@@ -490,11 +494,11 @@ class RegOrogram:
     """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding."""
     if numpy.fabs(self._spacing - q._spacing) < 1e-12 and self._blocksize==q._blocksize:
       # Efficient version - the change points are aligned...
-      return regorofun.aligned_crossentropy(self._blocksize, self._spacing, self._low-1, self._high+2, self._data, q._data, self._total, q._total)
+      return xentropy.aligned_crossentropy(self._blocksize, self._spacing, self._low-1, self._high+2, self._data, q._data, self._total, q._total)
     
     else:
       # Inefficient version - the change points are not aligned...
-      return regorofun.misaligned_crossentropy(self._low-1, self._high+2, self._data, q._data, self._total, q._total, self._blocksize, q._blocksize, self._spacing, q._spacing)
+      return xentropy.misaligned_crossentropy(self._low-1, self._high+2, self._data, q._data, self._total, q._total, self._blocksize, q._blocksize, self._spacing, q._spacing)
 
 
   def crossentropynumint(self, q, samples=1024*1024, threshold=1e-12):
