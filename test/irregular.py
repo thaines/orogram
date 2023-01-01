@@ -63,3 +63,18 @@ print(f'  analytic = {model.entropy():.6f}')
 print(f'  numerical integration = {model.entropynumint():.6f}')
 print(f'  monte-carlo = {model.entropymc():.6f}')
 print()
+
+
+
+# Need another model to test cross entropy...
+rv = norm(loc=4, scale=2)
+base_model = orogram.RegOrogram(0.1)
+base_model.bake(rv.cdf, -2, 10)
+
+model2 = orogram.Orogram(base_model)
+
+print('Cross entropy, H(N(5,0.5), N(4,2)):')
+print(f'  analytic = {model.crossentropy(model2):.6f}')
+print(f'  numerical integration = {model.crossentropynumint(model2):.6f}')
+print(f'  monte-carlo = {model.crossentropymc(model2):.6f}')
+print()

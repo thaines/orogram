@@ -67,7 +67,8 @@ class Orogram:
       self._cdf = numpy.empty(x.shape, dtype=numpy.float32)
       self._cdf[0] = 0.0
       self._cdf[1:] = numpy.cumsum(mass)
-  
+      self._cdf[-1] = 1.0
+
   
   def copy(self):
     """Makes a copy."""
@@ -300,3 +301,44 @@ class Orogram:
     
     # Entropy!..
     return -numpy.log(numpy.maximum(y, 1e-12)).mean()
+
+
+  def crossentropy(self, q):
+    """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding."""
+    return xentropy.irregular_crossentropy(self._x, self._y, q._x, q._y)
+
+
+  def crossentropynumint(self, q, samples=1024*1024, threshold=1e-12):
+    """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses numerical integration and exists for testing only - slow."""
+    
+    # Evaluate p across range of self distribution...
+    x = numpy.linspace(self._x[0], self._x[-1], samples)
+    p = self(x)
+    delta = x[1] - x[0]
+    
+    # Filter out the zeros - log gets very unhappy about them...
+    good = p>=threshold
+    x = x[good]
+    p = p[good]
+    
+    # Evaluate log(q)... 
+    qlog = numpy.log(numpy.maximum(q(x), 1e-32))
+    
+    # Crossentropy!..
+    return -delta * (p * qlog).sum()
+
+
+  def crossentropymc(self, q, samples=1024*1024, threshold=1e-12, rng=None):
+    """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses monte-carlo itnergation and exists for testing only - super slow."""
+    
+    # Draw and evaluate...
+    x = self.draw(samples, rng)
+    y = q(x)
+    
+    # Calculate cross-entropy...
+    return -numpy.log(numpy.maximum(y, 1e-32)).mean()
+  
+  
+  def kl(self, q):
+    """Calculates the Kullback—Leibler divergence between two distributions, i.e. the expected extra nats needed for encoding data with the distrbution represented by this object when the encoder is optimised for the distribution of q, the first parameter to this method. Convenience method that uses the cross-entropy and entropy methods."""
+    return self.crossentropy(q) - self.entropy()

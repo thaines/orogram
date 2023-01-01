@@ -239,7 +239,7 @@ cpdef float misaligned_crossentropy(int p_start, int p_end, p_dic, q_dic, float 
         log_q0 = log(q0) if q0>=1e-64 else -150
       
       else:
-        p0 = p1
+        p0 = p1# Interpolate as needed to get parameters, reusing if possible...
         q0 = q1
         log_q0 = log_q1
 
@@ -267,4 +267,122 @@ cpdef float misaligned_crossentropy(int p_start, int p_end, p_dic, q_dic, float 
       else:
         qt = qt_next
   
+  return ret
+
+
+
+cpdef float irregular_crossentropy(float[:] p_x, float[:] p_y, float[:] q_x, float[:] q_y) nogil:
+  """Calculates the cross entropy (nats) between two irregularly spaced orograms."""
+  cdef float ret = 0.0
+  
+  # Position in sequence state (includes binary search for q)...
+  cdef long pi = 0
+  cdef float pt = 0.0
+  
+  cdef long low, high, half
+  cdef long qi
+  cdef float qt
+  
+  if p_x[pi] < q_x[0]:
+    qi = 0
+    qt = 0.0
+  
+  elif p_x[pi] > q_x[q_x.shape[0] - 1]:
+    return -INFINITY
+  
+  else:
+    low = 0
+    high = q_x.shape[0] - 1
+    
+    while low+1 < high:
+      half = (low + high) // 2
+      if p_x[pi] < q_x[half]:
+        high = half
+      else:
+        low = half
+    
+    qi = low
+    if qi+1 < q_x.shape[0]:
+      qt = (p_x[pi] - q_x[qi]) / (q_x[qi+1] - q_x[qi])
+    else:
+      qt = 0.0
+  
+  # Previous value, and next value, with -1 as dummy...
+  cdef float p_curr = p_y[0]
+  cdef float q_curr = (1-qt) * q_y[qi] + qt * q_y[qi+1] if qi+1 < q_x.shape[0] else q_y[qi]
+  
+  cdef float p_next = -1.0, q_next = -1.0
+  
+  # Further variables needed...
+  cdef float p_x_next = 0.0, q_x_next = 0.0
+  cdef float pt_next, qt_next, width
+  cdef float p0, p1 = -1, q0, q1 = 0, log_q0, log_q1 = -150
+  
+  # Loop through the entirety of p, calculating for each segment in turn...
+  while pi+1 < p_x.shape[0]:
+    # If p_next is a dummy value fill in...
+    if p_next < 0.0:
+      if pi+1 < p_y.shape[0]:
+        p_x_next = p_x[pi+1]
+        p_next = p_y[pi+1]
+      else:
+        p_x_next = INFINITY
+        p_next = 0.0
+    
+    # If q_next is a dummy value fill in...
+    if q_next < 0.0:
+      if qi+1 < q_y.shape[0]:
+        q_x_next = q_x[qi+1]
+        q_next = q_y[qi+1]
+      else:
+        q_x_next = INFINITY
+        q_next = 0.0
+    
+    # Work out what the next step is - either qi or pi is going to get incremented, the other will probably go part way, but represent the move by the t value of the ending position...
+    if p_x_next < q_x_next:
+      pt_next = 1.0
+      qt_next = (p_x_next - q_x[qi]) / (q_x_next - q_x[qi])
+      width = (p_x_next - p_x[pi]) * (1 - pt)
+      
+    else:
+      pt_next = (q_x_next - p_x[pi]) / (p_x_next - p_x[pi])
+      qt_next = 1.0
+      width = (q_x_next - q_x[qi]) * (1 - qt)
+    
+    # Interpolate as needed to get parameters, reusing if possible...
+    if p1 < 0.0:
+      p0 = ((1-pt)*p_curr + pt*p_next) if pt>1e-12 else p_curr
+      q0 = ((1-qt)*q_curr + qt*q_next) if qt>1e-12 else q_curr
+      log_q0 = log(q0) if q0>=1e-64 else -150
+      
+    else:
+      p0 = p1# Interpolate as needed to get parameters, reusing if possible...
+      q0 = q1
+      log_q0 = log_q1
+
+    p1 = ((1-pt_next)*p_curr + pt_next*p_next) if pt_next<(1-1e-12) else p_next
+    q1 = ((1-qt_next)*q_curr + qt_next*q_next) if qt_next<(1-1e-12) else q_next
+    log_q1 = log(q1) if q1>=1e-64 else -150
+    
+    # Calculate cross entropy for this section...
+    ret += width*section_crossentropy(p0, p1, q0, q1, log_q0, log_q1)
+    
+    # Move indices forward to next linear section...
+    if pt_next > (1.0 - 1e-12):
+      pi += 1
+      p_curr = p_next
+      p_next = -1.0
+      pt = 0.0
+    else:
+      pt = pt_next
+        
+    if qt_next > (1.0 - 1e-12):
+      qi += 1
+      q_curr = q_next
+      q_next = -1.0
+      qt = 0.0
+    else:
+      qt = qt_next
+  
+  # Return total...
   return ret
