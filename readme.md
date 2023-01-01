@@ -8,4 +8,5 @@ That may be read as _histogram_ where the _histo_ (poles, as in telephone poles)
 
 ## Contents
 
-* `RegOrogram` - An orogram with regularly spaced bins, much the same as your typical histogram. Feature rich — has everything you would expect of a 1D density estimate.
+* `RegOrogram` — An orogram with regularly spaced bins, much the same as your typical histogram. Feature rich — has everything you would expect of a 1D density estimate. Designed with data capture in mind.
+* `Orogram` — An orogram with irregularly spaced bins. Reasonable set of features, but immutable and hence not for data capture. Simpler data structures so typically faster than `RegOrogram`. Otherwise does its best to match the `RegOrogram` feature set.
