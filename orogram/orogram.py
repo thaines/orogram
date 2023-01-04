@@ -12,18 +12,10 @@ try:
 except:
   pass
 
+from . import xentropy
+from .simplify import simplify
 
-try:
-  from . import xentropy
-
-except ImportError:
-  import xentropy
-
-
-try:
-  from .regorogram import RegOrogram
-except ImportError:
-  from regorogram import RegOrogram
+from .regorogram import RegOrogram
 
 
 

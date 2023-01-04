@@ -12,14 +12,8 @@ try:
 except:
   pass
 
-
-try:
-  from . import regorofun
-  from . import xentropy
-
-except ImportError:
-  import regorofun
-  import xentropy
+from . import regorofun
+from . import xentropy
 
 
 
