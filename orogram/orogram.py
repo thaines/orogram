@@ -1,7 +1,7 @@
 # Copyright 2022 Tom SF Haines
 
 import sys
-
+from collections import namedtuple
 import numpy
 
 
@@ -13,9 +13,14 @@ except:
   pass
 
 from . import xentropy
-from .simplify import simplify
+from . import simplify
 
 from .regorogram import RegOrogram
+
+
+
+# A named tuple that is returned by Orogram.simplify()...
+SimplifyResult = namedtuple('SimplifyResult', ['orogram', 'cost', 'coststart'])
 
 
 
@@ -334,3 +339,10 @@ class Orogram:
   def kl(self, q):
     """Calculates the Kullback—Leibler divergence between two distributions, i.e. the expected extra nats needed for encoding data with the distrbution represented by this object when the encoder is optimised for the distribution of q, the first parameter to this method. Convenience method that uses the cross-entropy and entropy methods."""
     return self.crossentropy(q) - self.entropy()
+  
+  
+  def simplify(self, samples, perbin = 16):
+    """Simplifies this orogram, returning a named tuple containing a new, simpler, orogram. Parameters are the number of samples that were used to generate this orogram (not recorded in Orogram object, hence having to pass) and the expected number of data points per bin centre, which drives the prior. Return tuple contains (orogram - simplified Orogram, cost - it's cost (negative log probability, includes probability ratios so not true cost), coststart - the cost of this input to be a point of comparison)"""
+    retx, retp, cost, coststart = simplify.dp(self._x, self._y, samples, perbin)
+    ret = Orogram(retx, retp, norm=False, copy=False)
+    return SimplifyResult(orogram=ret, cost=cost, coststart=coststart)

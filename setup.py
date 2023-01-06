@@ -8,7 +8,7 @@ from Cython.Build import cythonize
 
 setup(
   name = 'Orogram',
-  version = '0.2',
+  version = '0.3',
   author = 'Tom SF Haines',
   author_email = 'thaines@gmail.com',
   description = 'A library for working with 1D PDFs represented with piecewise linear functions.',
