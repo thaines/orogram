@@ -4,3 +4,5 @@ build
 dist
 Orogram.egg-info
 *.c
+*.svg
+

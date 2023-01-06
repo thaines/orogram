@@ -73,7 +73,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   
   cdef long[:] index = numpy.empty(x.shape[0], dtype=int)
   with nogil:
-    index[0] = x.shape[0] - 1
+    index[0] = 0
     for i in range(1, index.shape[0]):
       index[i] = index[i-1] + x.shape[0] - i - 1
   
@@ -82,18 +82,19 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   cdef float[:] mass_end = numpy.empty(pairs, dtype=numpy.float32)
   cdef float ms, me, t
   
-  for i in range(x.shape[0]):
-    for j in range(i+1, x.shape[0]):
-      ms = 0.0
-      me = 0.0
+  with nogil:
+    for i in range(x.shape[0]):
+      for j in range(i+1, x.shape[0]):
+        ms = 0.0
+        me = 0.0
       
-      for k in range(i,j+1):
-        t = (x[k] - x[i]) / (x[j] - x[i])
-        ms += (1-t) * p[k]
-        me += t * p[k]
+        for k in range(i,j+1):
+          t = (x[k] - x[i]) / (x[j] - x[i])
+          ms += (1-t) * p[k]
+          me += t * p[k]
       
-      mass_start[index[i] + j - i - 1] = ms
-      mass_end[index[i] + j - i - 1] = me
+        mass_start[index[i] + j - i - 1] = ms
+        mass_end[index[i] + j - i - 1] = me
   
   # Create data structure to record the partial objective evaluations, for dyanmic programming. An upper triangular matrix where we record both the cost of the best solution and the index of the previous bin that 'won' the argmax. The index for the evaluation of R(b,c) is in cost[index[b] + c - b - 1] with the a selected by the argmin at the same position in the cost_a[] array. In addition the probability mass assigned to position b is recorded in cost_bm...
   cdef float[:] cost = numpy.empty(pairs, dtype=numpy.float32)
