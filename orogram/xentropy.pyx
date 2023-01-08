@@ -69,22 +69,27 @@ cpdef float irr_entropy(float[:] x, float[:] prob):
 
 
 
-cdef float section_crossentropy(float p0, float p1, float q0, float q1, float log_q0, float log_q1) nogil:
+cdef float section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1) nogil:
+  """Solves integral for a linear section as needed to calculate cross entropy. Internals carefully ordered to maximise numerical stability, but really don't think that's required - just being paranoid."""
   # Early exit if it's zero...
   if p0<1e-12 and p1<1e-12:
     return 0.0
   
-  # The first term...
-  cdef float ret = -0.5 * (p0*log_q0 + p1*log_q1)
-  
   # Second and third terms but only if not too close to the limit...
+  cdef float ret = 0
   cdef float qdelta = q1 - q0
   if fabs(qdelta)>1e-12:
-    # Second term...
-    ret += (p1*q0*q0 - p0*q1*q1) * (log_q1 - log_q0) / (2*qdelta*qdelta)
+    # Second term, partial division...
+    ret = ((p1*q0*q0 - p0*q1*q1) * (log_q1 - log_q0)) / qdelta
     
-    # Third term...
-    ret += ((3*p0 + p1)*q1 - (p0 + 3*p1)*q0) / (4*qdelta)
+    # Third term without division...
+    ret += 0.5 * ((3*p0 + p1)*q1 - (p0 + 3*p1)*q0)
+    
+    # Remaining division required to get both terms correct...
+    ret /= 2 * qdelta
+
+  # The first term...
+  ret -= 0.5 * (p0*log_q0 + p1*log_q1)
   
   # Return...
   return ret

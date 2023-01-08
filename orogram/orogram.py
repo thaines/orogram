@@ -20,7 +20,7 @@ from .regorogram import RegOrogram
 
 
 # A named tuple that is returned by Orogram.simplify()...
-SimplifyResult = namedtuple('SimplifyResult', ['solution', 'cost', 'startcost'])
+SimplifyResult = namedtuple('SimplifyResult', ['solution', 'cost', 'priorcost'])
 
 
 
@@ -342,7 +342,7 @@ class Orogram:
   
   
   def simplify(self, samples, perbin = 16):
-    """Simplifies this orogram, returning a named tuple containing a new, simpler, orogram. Parameters are the number of samples that were used to generate this orogram (not recorded in Orogram object, hence having to pass) and the expected number of data points per bin centre, which drives the prior. Return tuple contains (solution - simplified Orogram, cost - it's cost (negative log probability, includes probability ratios so not true cost), coststart - the cost of this input to be a point of comparison)"""
+    """Simplifies this orogram, returning a named tuple containing a new, simpler, orogram. Parameters are the number of samples that were used to generate this orogram (not recorded in Orogram object, hence having to pass) and the expected number of data points per bin centre, which drives the prior. Return tuple contains (solution - simplified Orogram, cost - it's cost (negative log probability, includes probability ratios so not true cost), priorcost - the cost of the prior on the input; add to the input entropy to get a valid "improvement quantity")"""
     retx, retp, cost, startcost = simplify.dp(self._x, self._y, samples, perbin)
     ret = Orogram(retx, retp, norm=False, copy=False)
-    return SimplifyResult(solution=ret, cost=cost, startcost=startcost)
+    return SimplifyResult(solution=ret, cost=cost, priorcost=startcost)

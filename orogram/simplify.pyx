@@ -65,7 +65,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   
   with nogil:
     for i in range(p_rat.shape[0]):
-      p_rat[i] = -log(exp(mass[i]/perbin) - 1)
+      p_rat[i] = -log(exp(samples*mass[i]/perbin) - 1)
       cost_input += p_rat[i]
   
   # We need multiple data structures with data for all pairs of x indices; to pack them in we use 1D arrays where for two indices, i and j with i<j, we can find the value for the given pair at <some array>[index[i] + j - i - 1]
@@ -75,12 +75,12 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   with nogil:
     index[0] = 0
     for i in range(1, index.shape[0]):
-      index[i] = index[i-1] + x.shape[0] - i - 1
-  
+      index[i] = index[i-1] + x.shape[0] - i
+
   # Pre-calculate the amount of probability mass allocated to the limits of each pairing, i.e. sum in the bins within the range interpolated correctly. As each range is needed twice (once for each end) this halves computation at the expense of allocating an array, so may not be faster for smaller bin counts...
   cdef float[:] mass_start = numpy.empty(pairs, dtype=numpy.float32)
   cdef float[:] mass_end = numpy.empty(pairs, dtype=numpy.float32)
-  cdef float ms, me, t
+  cdef float ms, me, t, width
   
   with nogil:
     for i in range(x.shape[0]):
@@ -90,8 +90,9 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
       
         for k in range(i,j+1):
           t = (x[k] - x[i]) / (x[j] - x[i])
-          ms += (1-t) * p[k]
-          me += t * p[k]
+          width = 0.5 * (x[k+1 if k+1<x.shape[0] else k] - x[k-1 if k>0 else k])
+          ms += (1-t) * p[k] * width
+          me += t * p[k] * width
       
         mass_start[index[i] + j - i - 1] = ms
         mass_end[index[i] + j - i - 1] = me
@@ -111,14 +112,15 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   cdef long final_a
   cdef float final, final_bm
   
-  cdef float q0, q1, log_q0, log_q1
+  cdef float q0, q1
+  cdef double log_q0, log_q1
   
   with nogil:
     # First bin...
     for ci in range(1, x.shape[0]):
       cost[index[0] + ci - 1] = p_rat[0]
       cost_a[index[0] + ci - 1] = -1
-      cost_bm[index[0] + ci - 1] = mass_start[index[0] + ci - 1]
+      cost_bm[index[0] + ci - 1] = 2 * mass_start[index[0] + ci - 1] / (x[ci] - x[0])
     
     # Middle bins...
     for bi in range(1, x.shape[0]-1):
@@ -133,16 +135,18 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
           # Get the mass at points a and b, plus initalise curr with the relevent R() and inclusion prior ratio...
           am = cost_bm[index[ai] + bi - ai - 1]
           bm = mass_end[index[ai] + bi - ai - 1] + mass_start[index[bi] + ci - bi - 1]
+          bm -= p[bi] * 0.5 * (x[bi+1] - x[bi-1]) # Central bin gets double counted
+          bm /= 0.5 * (x[ci] - x[ai])
           curr = cost[index[ai] + bi - ai - 1] + p_rat[bi]
           
           # Loop linear segments from a to b, summing in their cross entropy term...
           q0 = am
-          log_q0 = log(q0)
+          log_q0 = log(q0) if q0>=1e-64 else -150
           
           for i in range(ai, bi):
             t = (x[i+1] - x[ai]) / (x[bi] - x[ai])
             q1 = (1-t)*am + t*bm
-            log_q1 = log(q1)
+            log_q1 = log(q1) if q1>=1e-64 else -150
           
             curr += samples * (x[i+1] - x[i]) * section_crossentropy(p[i], p[i+1], q0, q1, log_q0, log_q1)
             
@@ -169,23 +173,23 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
     for ai in range(bi):
       # Get the mass at points a and b, plus initalise curr with the relevent R() and inclusion prior ratio...
       am = cost_bm[index[ai] + bi - ai - 1]
-      bm = mass_end[index[ai] + bi - ai - 1]
+      bm = 2 * mass_end[index[ai] + bi - ai - 1] / (x[bi] - x[ai])
       curr = cost[index[ai] + bi - ai - 1] + p_rat[bi]
       
       # Loop linear segments from a to b, summing in their cross entropy term...
       q0 = am
-      log_q0 = log(q0)
+      log_q0 = log(q0) if q0>=1e-64 else -150
           
       for i in range(ai, bi):
         t = (x[i+1] - x[ai]) / (x[bi] - x[ai])
         q1 = (1-t)*am + t*bm
-        log_q1 = log(q1)
+        log_q1 = log(q1) if q1>=1e-64 else -150
           
         curr += samples * (x[i+1] - x[i]) * section_crossentropy(p[i], p[i+1], q0, q1, log_q0, log_q1)
             
         q0 = q1
         log_q0 = log_q1
-          
+      
       # If best thus far record...
       if curr<final:
         final = curr
@@ -198,13 +202,14 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   # bi = x.shape[0]-1
   ai = final_a
   
-  while True:
-    nlen += 1
-    ci = bi
-    bi = ai
-    if bi==0:
-      break
-    ai = cost_a[index[bi] + ci - bi - 1]
+  with nogil:
+    while True:
+      nlen += 1
+      ci = bi
+      bi = ai
+      if bi==0:
+        break
+      ai = cost_a[index[bi] + ci - bi - 1]
   
   # Extract the return information and package it all up for the return...
   cdef object retx = numpy.empty(nlen, dtype=numpy.float32)
@@ -213,21 +218,23 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   cdef float[:] rx = retx
   cdef float[:] rp = retp
   
-  i = rx.shape[0]-1
-  rx[i] = x[x.shape[0]-1]
-  rp[i] = final_bm
+  with nogil:
+    i = rx.shape[0]-1
+    rx[i] = x[x.shape[0]-1]
+    rp[i] = final_bm
   
-  bi = x.shape[0]-1
-  ai = final_a
-  while True:
-    i -= 1
-    rx[i] = x[ai]
-    rp[i] = cost_bm[index[ai] + bi - ai - 1]
-    
-    ci = bi
-    bi = ai
-    if bi==0:
-      break
-    ai = cost_a[index[bi] + ci - bi - 1]
+    bi = x.shape[0]-1
+    ai = final_a
+    while True:
+      ci = bi
+      bi = ai
+      
+      i -= 1
+      rx[i] = x[bi]
+      rp[i] = cost_bm[index[bi] + ci - bi - 1]
+
+      if bi==0:
+        break
+      ai = cost_a[index[bi] + ci - bi - 1]
 
   return retx, retp, final, cost_input
