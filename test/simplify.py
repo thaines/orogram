@@ -35,7 +35,7 @@ print()
 
 
 # Simplify a Gaussian for various parameters...
-for samples, perbin in [(16,16), (64,16), (256,16), (1024,16), (1024,1), (1024,128), (1024*32,16)]:
+for samples, perbin in [(16,16), (64,16), (256,16), (1024,16), (1024,1), (1024,128), (1024*32,16), (1024*32,128), (1024*32,256)]:
   print(f'Gaussian(samples = {samples}; per bin = {perbin}):')
   
   data = rng.standard_normal(samples)
