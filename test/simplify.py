@@ -22,8 +22,8 @@ model = orogram.Orogram(base_model)
 res = model.simplify(1, 1)
 
 print(f'  bins: {len(model)} -> {len(res.solution)}')
-print(f'  cost: {model.entropy() + res.priorcost} -> {res.cost}')
-print(f'  no prior kl loss = {model.kl(res.solution)}')
+print(f'  cost: {1*model.entropy() + res.priorcost:.3f} -> {res.cost:.3f}')
+print(f'  kl(model || solution) = {model.kl(res.solution):.6f}')
   
 plt.figure(figsize=[12, 6])
 plt.plot(*model.graph())
@@ -49,8 +49,8 @@ for samples, perbin in [(16,16), (64,16), (256,16), (1024,16), (1024,1), (1024,1
   end = time.time()
   
   print(f'  bins: {len(model)} -> {len(res.solution)}')
-  print(f'  cost: {model.entropy() + res.priorcost} -> {res.cost}')
-  print(f'  no prior kl loss = {model.kl(res.solution)}')
+  print(f'  cost: {samples*model.entropy() + res.priorall:.3f} -> {res.cost:.3f}')
+  print(f'  kl(model || solution) = {model.kl(res.solution):.6f}')
   print(f'  time = {1000*(end - start):.3f}ms')
   
   plt.figure(figsize=[12, 6])

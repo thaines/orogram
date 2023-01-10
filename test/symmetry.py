@@ -32,7 +32,7 @@ model2 = orogram.Orogram(base_model2)
 res2 = model2.simplify(data.shape[0], 16)
 
 print(f'  bins: {len(res1.solution)} | {len(res2.solution)}')
-print(f'  cost: {res1.cost} | {res2.cost}')
+print(f'  cost: {res1.cost:.3f} | {res2.cost:.3f}')
 
 
 

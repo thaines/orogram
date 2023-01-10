@@ -15,7 +15,7 @@ from .xentropy cimport section_crossentropy
 
 
 cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
-  """Simplifies an orogram by picking a subset of bin centers to keep; uses dynamic programing to find the maximum a posteriori with cross entropy as a substitute for not having the actual data. Main input is x[:] and p[:], two algined arrays describing an orogram. Because this is normalised you also provide how many samples were used to generate the input PDF; you also need to provide the prior, as the expected number of samples in each bin of the output — this is converted into the parameter of an exponential distribution (lambda = 1/perbin). The return is (new x, new p, cost of output, cost of input). Note that the costs are negative log probability and includes ratios for including the points it does relative to the, not being included, meaning it is not directly comparable to the cost if calculated manually. Cost of input is the cost of the input, which is just the sum of ratios for all entries; for comparison really."""
+  """Simplifies an orogram by picking a subset of bin centers to keep; uses dynamic programing to find the maximum a posteriori with cross entropy as a substitute for not having the actual data. Main input is x[:] and p[:], two algined arrays describing an orogram. Because this is normalised you also provide how many samples were used to generate the input PDF; you also need to provide the prior, as the expected number of samples in each bin of the output — this is converted into the parameter of an exponential distribution (lambda = 1/perbin). The return is (new x, new p, cost of output, cost with prior term only, cost of prior term if all bins kept). Note that the costs are negative log probability and includes ratios for including the points it does relative to the, not being included, meaning it is not directly comparable to the cost if calculated manually. Cost of input is the cost of the input, which is just the sum of ratios for all entries; for comparison really."""
   cdef long i, j, k, bad
   
   # Calculate the quantity of probability mass that snaps to every center in x, counting the number of zeroes while we're at it...
@@ -61,12 +61,12 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
 
   # Use the mass to calculate the prior ratio, as in the change in negative log liklihood given that the indexed point is included...
   cdef float[:] p_rat = numpy.empty(x.shape[0], dtype=numpy.float32)
-  cdef float cost_input = 0.0
+  cdef float priorall = 0.0
   
   with nogil:
     for i in range(p_rat.shape[0]):
       p_rat[i] = -log(exp(samples*mass[i]/perbin) - 1)
-      cost_input += p_rat[i]
+      priorall += p_rat[i]
   
   # We need multiple data structures with data for all pairs of x indices; to pack them in we use 1D arrays where for two indices, i and j with i<j, we can find the value for the given pair at <some array>[index[i] + j - i - 1]
   cdef long pairs = (x.shape[0] * (x.shape[0]-1)) // 2
@@ -217,11 +217,13 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   
   cdef float[:] rx = retx
   cdef float[:] rp = retp
+  cdef float priorcost
   
   with nogil:
     i = rx.shape[0]-1
     rx[i] = x[x.shape[0]-1]
     rp[i] = final_bm
+    priorcost = p_rat[0]
   
     bi = x.shape[0]-1
     ai = final_a
@@ -232,9 +234,10 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
       i -= 1
       rx[i] = x[bi]
       rp[i] = cost_bm[index[bi] + ci - bi - 1]
+      priorcost += p_rat[bi]
 
       if bi==0:
         break
       ai = cost_a[index[bi] + ci - bi - 1]
 
-  return retx, retp, final, cost_input
+  return retx, retp, final, priorcost, priorall

@@ -20,7 +20,11 @@ from .regorogram import RegOrogram
 
 
 # A named tuple that is returned by Orogram.simplify()...
-SimplifyResult = namedtuple('SimplifyResult', ['solution', 'cost', 'priorcost'])
+SimplifyResult = namedtuple('SimplifyResult', ['solution', 'cost', 'priorcost', 'priorall'])
+# solution = The Orogram that is the solution
+# cost - Cost of the solution
+# priorcost - Cost of the prior only; can get data term by subtracting this from cost
+# priorall - Cost of prior if all bins are included, as for the input. This plus the entropy multiplied by the sample count is the cost of the input.
 
 
 
@@ -337,12 +341,12 @@ class Orogram:
   
   
   def kl(self, q):
-    """Calculates the Kullback—Leibler divergence between two distributions, i.e. the expected extra nats needed for encoding data with the distrbution represented by this object when the encoder is optimised for the distribution of q, the first parameter to this method. Convenience method that uses the cross-entropy and entropy methods."""
+    """Calculates the Kullback—Leibler divergence between two distributions, i.e. the expected extra nats needed for encoding data with the distribution represented by this object when the encoder is optimised for the distribution of q, the first parameter to this method. Often denoted D_{KL}(self || q) Convenience method that uses the cross-entropy and entropy methods, i.e. D_{KL}(self || q) = H(self, q) - H(self)"""
     return self.crossentropy(q) - self.entropy()
   
   
   def simplify(self, samples, perbin = 16):
-    """Simplifies this orogram, returning a named tuple containing a new, simpler, orogram. Parameters are the number of samples that were used to generate this orogram (not recorded in Orogram object, hence having to pass) and the expected number of data points per bin centre, which drives the prior. Return tuple contains (solution - simplified Orogram, cost - it's cost (negative log probability, includes probability ratios so not true cost), priorcost - the cost of the prior on the input; add to the input entropy to get a valid "improvement quantity")"""
-    retx, retp, cost, startcost = simplify.dp(self._x, self._y, samples, perbin)
+    """Simplifies this orogram, returning a named tuple containing a new, simpler, orogram. Parameters are the number of samples that were used to generate this orogram (not recorded in Orogram object, hence having to pass in) and the expected number of data points per bin centre, which sets the prior. Returns a named tuple contains (solution - simplified Orogram, cost - it's cost (negative log probability, includes probability ratios for prior so not true cost), priorcost - the cost of the prior ratio term only (subtract from cost to get cost of data term only), priorall - the cost of the prior ratio on the input, i.e. with all bins kept; add to the input entropy scaled by the sample count to get a comparable cost for the input)"""
+    retx, retp, cost, priorcost, priorall = simplify.dp(self._x, self._y, samples, perbin)
     ret = Orogram(retx, retp, norm=False, copy=False)
-    return SimplifyResult(solution=ret, cost=cost, priorcost=startcost)
+    return SimplifyResult(solution=ret, cost=cost, priorcost=priorcost, priorall=priorall)
