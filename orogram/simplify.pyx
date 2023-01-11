@@ -212,17 +212,20 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
       ai = cost_a[index[bi] + ci - bi - 1]
   
   # Extract the return information and package it all up for the return...
-  cdef object retx = numpy.empty(nlen, dtype=numpy.float32)
-  cdef object retp = numpy.empty(nlen, dtype=numpy.float32)
+  cdef numpy.ndarray retx = numpy.empty(nlen, dtype=numpy.float32)
+  cdef numpy.ndarray retp = numpy.empty(nlen, dtype=numpy.float32)
+  cdef numpy.ndarray retk = numpy.zeros(x.shape[0], dtype=bool)
   
   cdef float[:] rx = retx
   cdef float[:] rp = retp
+  cdef numpy.uint8_t[:] rk = numpy.frombuffer(retk, dtype=numpy.uint8)
   cdef float priorcost
   
   with nogil:
     i = rx.shape[0]-1
     rx[i] = x[x.shape[0]-1]
     rp[i] = final_bm
+    rk[x.shape[0]-1] = True
     priorcost = p_rat[0]
   
     bi = x.shape[0]-1
@@ -234,10 +237,11 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
       i -= 1
       rx[i] = x[bi]
       rp[i] = cost_bm[index[bi] + ci - bi - 1]
+      rk[bi] = True
       priorcost += p_rat[bi]
 
       if bi==0:
         break
       ai = cost_a[index[bi] + ci - bi - 1]
 
-  return retx, retp, final, priorcost, priorall
+  return retx, retp, retk, final, priorcost, priorall

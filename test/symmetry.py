@@ -33,15 +33,26 @@ res2 = model2.simplify(data.shape[0], 16)
 
 print(f'  bins: {len(res1.solution)} | {len(res2.solution)}')
 print(f'  cost: {res1.cost:.3f} | {res2.cost:.3f}')
+print()
+
+print('Indices kept (aligned):')
+forwards = ''.join([('T' if v else 'F') for v in res1.kept])
+backwards = ''.join([('T' if v else 'F') for v in res2.kept[::-1]])
+
+for block in range(0, res1.kept.shape[0], 60):
+  print('-> ' + forwards[block:block+60])
+  print('<- ' + backwards[block:block+60])
+  print()
 
 
 
 # Generate graph, flipping second, such that they should perfectly match if all is well!..
 plt.figure(figsize=[12, 6])
-plt.plot(*model1.graph())
-plt.plot(*res1.solution.graph())
+plt.plot(*model1.graph(), label='input')
+plt.plot(*res1.solution.graph(), label='forwards')
 
 x, y = res2.solution.graph()
-plt.plot(-x, y)
+plt.plot(-x, y, label='backwards')
 
+plt.legend()
 plt.savefig('symmetry.svg')

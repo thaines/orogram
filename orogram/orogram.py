@@ -20,9 +20,10 @@ from .regorogram import RegOrogram
 
 
 # A named tuple that is returned by Orogram.simplify()...
-SimplifyResult = namedtuple('SimplifyResult', ['solution', 'cost', 'priorcost', 'priorall'])
+SimplifyResult = namedtuple('SimplifyResult', ['solution', 'cost', 'kept', 'priorcost', 'priorall'])
 # solution = The Orogram that is the solution
 # cost - Cost of the solution
+# kept - Boolean array indicating which bin centers from the input have been kept (True if included in solution, False if not)
 # priorcost - Cost of the prior only; can get data term by subtracting this from cost
 # priorall - Cost of prior if all bins are included, as for the input. This plus the entropy multiplied by the sample count is the cost of the input.
 
@@ -347,6 +348,6 @@ class Orogram:
   
   def simplify(self, samples, perbin = 16):
     """Simplifies this orogram, returning a named tuple containing a new, simpler, orogram. Parameters are the number of samples that were used to generate this orogram (not recorded in Orogram object, hence having to pass in) and the expected number of data points per bin centre, which sets the prior. Returns a named tuple contains (solution - simplified Orogram, cost - it's cost (negative log probability, includes probability ratios for prior so not true cost), priorcost - the cost of the prior ratio term only (subtract from cost to get cost of data term only), priorall - the cost of the prior ratio on the input, i.e. with all bins kept; add to the input entropy scaled by the sample count to get a comparable cost for the input)"""
-    retx, retp, cost, priorcost, priorall = simplify.dp(self._x, self._y, samples, perbin)
+    retx, retp, retk, cost, priorcost, priorall = simplify.dp(self._x, self._y, samples, perbin)
     ret = Orogram(retx, retp, norm=False, copy=False)
-    return SimplifyResult(solution=ret, cost=cost, priorcost=priorcost, priorall=priorall)
+    return SimplifyResult(solution=ret, cost=cost, kept=retk, priorcost=priorcost, priorall=priorall)
