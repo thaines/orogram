@@ -103,7 +103,7 @@ class Orogram:
   
   
   def _mass(self):
-    """Returns the total probability mass - should always be 1, so this is for debuging only."""
+    """Returns the total probability mass - should always be 1, so this is for debugging only."""
     return 0.5 * ((self._y[:-1] + self._y[1:]) * (self._x[1:] - self._x[:-1])).sum()
 
 

@@ -47,6 +47,26 @@ for block in range(0, res1.kept.shape[0], 60):
 
 
 
+# Manually recalculate graph for forwards with selected vertices...
+fx = res1.solution._x.copy()
+fy = numpy.zeros(fx.shape[0])
+
+for v in data:
+  after = numpy.searchsorted(fx, v)
+  t = (v - fx[after-1]) / (fx[after] - fx[after-1])
+  
+  fy[after-1] += (1-t)
+  fy[after] += t
+
+fy[0] /= 0.5 * (fx[1] - fx[0])
+for i in range(1, fy.shape[0]-1):
+  fy[i] /= 0.5 * (fx[i+1] - fx[i-1])
+fy[-1] /= 0.5 * (fx[-1] - fx[-2])
+
+fy /= data.shape[0]
+
+
+
 # Generate graph, flipping second, such that they should perfectly match if all is well!..
 plt.figure(figsize=[12, 6])
 plt.plot(*model1.graph(), label='input')
@@ -54,6 +74,8 @@ plt.plot(*res1.solution.graph(), label='forwards')
 
 x, y = res2.solution.graph()
 plt.plot(-x, y, label='backwards')
+
+plt.plot(fx, fy, label='forwards recalculated')
 
 plt.legend()
 plt.savefig('symmetry.svg')
