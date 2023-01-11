@@ -33,6 +33,7 @@ res2 = model2.simplify(data.shape[0], 16)
 
 print(f'  bins: {len(res1.solution)} | {len(res2.solution)}')
 print(f'  cost: {res1.cost:.3f} | {res2.cost:.3f}')
+print(f'  mass: {res1.solution._mass():.6f} | {res2.solution._mass():.6f}')
 print()
 
 print('Indices kept (aligned):')

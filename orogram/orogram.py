@@ -100,6 +100,11 @@ class Orogram:
   def max(self):
     """Returns the maximum value to have any weight assigned to it. Note that the probability at this point is likely to be zero."""
     return self._x[-1]
+  
+  
+  def _mass(self):
+    """Returns the total probability mass - should always be 1, so this is for debuging only."""
+    return 0.5 * ((self._y[:-1] + self._y[1:]) * (self._x[1:] - self._x[:-1])).sum()
 
 
   def center(self, i):
