@@ -31,9 +31,30 @@ res1 = model1.simplify(data.shape[0], 16)
 model2 = orogram.Orogram(base_model2)
 res2 = model2.simplify(data.shape[0], 16)
 
+
+
+# Calculate prior manually...
+mass1 = numpy.zeros(model1._x.shape[0])
+mass1[:-1] += (model1._x[1:] - model1._x[:-1]) * (3*model1._y[:-1] + model1._y[1:]) / 8
+mass1[1:] += (model1._x[1:] - model1._x[:-1]) * (model1._y[:-1] + 3*model1._y[1:]) / 8
+
+p_rat1 = -numpy.log(numpy.maximum(numpy.exp(data.shape[0]*mass1/16) - 1, 1e-12))
+priorcost1 = p_rat1[res1.kept].sum()
+
+
+mass2 = numpy.zeros(model2._x.shape[0])
+mass2[:-1] += (model2._x[1:] - model2._x[:-1]) * (3*model2._y[:-1] + model2._y[1:]) / 8
+mass2[1:] += (model2._x[1:] - model2._x[:-1]) * (model2._y[:-1] + 3*model2._y[1:]) / 8
+
+p_rat2 = -numpy.log(numpy.maximum(numpy.exp(data.shape[0]*mass2/16) - 1, 1e-12))
+priorcost2 = p_rat2[res2.kept].sum()
+
+
+
+# Report...
 print(f'  bins: {len(res1.solution)} | {len(res2.solution)}')
 print(f'  cost: {res1.cost:.3f} | {res2.cost:.3f}')
-print(f'  manualish cost: {res1.priorcost + data.shape[0]*model1.crossentropy(res1.solution):.3f} | {res2.priorcost + data.shape[0]*model2.crossentropy(res2.solution):.3f}')
+print(f'  manual cost: {priorcost1 + data.shape[0]*model1.crossentropy(res1.solution):.3f} | {priorcost2 + data.shape[0]*model2.crossentropy(res2.solution):.3f}')
 print(f'  mass: {res1.solution._mass():.6f} | {res2.solution._mass():.6f}')
 print()
 
