@@ -13,27 +13,6 @@ rng = numpy.random.default_rng(0)
 
 
 
-# Quick triangle, because it's a super basic test with a known answer...
-print('triangle:')
-base_model = orogram.RegOrogram(0.2)
-base_model.add([0.0])
-
-model = orogram.Orogram(base_model)
-res = model.simplify(1, 1)
-
-print(f'  bins: {len(model)} -> {len(res.solution)}')
-print(f'  cost: {1*model.entropy() + res.priorcost:.3f} -> {res.cost:.3f}')
-print(f'  kl(model || solution) = {model.kl(res.solution):.6f}')
-  
-plt.figure(figsize=[12, 6])
-plt.plot(*model.graph())
-plt.plot(*res.solution.graph())
-plt.savefig(f'triangle.svg')
-
-print()
-
-
-
 # Simplify a Gaussian for various parameters...
 for samples, perbin in [(16,16), (64,16), (256,16), (1024,16), (1024,1), (1024,128), (1024*32,16), (1024*32,128), (1024*32,256)]:
   print(f'Gaussian(samples = {samples}; per bin = {perbin}):')
