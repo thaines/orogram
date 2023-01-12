@@ -16,7 +16,8 @@ cpdef float reg_entropy(float[:] prob, float spacing):
   """Calculates entropy of a regular orogram using the analytic equations I've derived."""
   cdef int i
   cdef float ret = 0.0
-  cdef float plogp_last, plogp, pdelta
+  cdef double plogp_last, plogp
+  cdef float pdelta
   
   plogp_last = prob[0] * log(prob[0]) if prob[0]>1e-12 else 0.0
   
@@ -44,7 +45,8 @@ cpdef float irr_entropy(float[:] x, float[:] prob):
   """Calculates entropy of an irregular orogram using the analytic equations I've derived."""
   cdef int i
   cdef float ret = 0.0
-  cdef float plogp_last, plogp, xdelta, pdelta
+  cdef double plogp_last, plogp
+  cdef float xdelta, pdelta
 
   plogp_last = prob[0] * log(prob[0]) if prob[0]>1e-12 else 0.0
   
@@ -102,7 +104,7 @@ cpdef float aligned_crossentropy(long blocksize, float spacing, int p_start, int
   cdef long i = p_start # Could +1, but then q_prev needs setting!
   cdef float p_prev = 0.0, p_curr
   cdef float q_prev = 0.0, q_curr
-  cdef float log_q_prev = -150, log_q_curr # -150 ~= log(1e-64)
+  cdef double log_q_prev = -150, log_q_curr # -150 ~= log(1e-64)
   cdef float ret = 0.0
   
   # Block indices and pointers...
@@ -198,7 +200,8 @@ cpdef float misaligned_crossentropy(int p_start, int p_end, p_dic, q_dic, float 
   
   # Variables needed within loop...
   cdef float pt_next, qt_next, width
-  cdef float p0, p1 = -1, q0, q1 = 0, log_q0, log_q1 = -150
+  cdef float p0, p1 = -1, q0, q1 = 0
+  cdef double log_q0, log_q1 = -150
   
   
   # Loop each linear section of the two orograms, which will be irregular due to the misalignment...
@@ -321,7 +324,8 @@ cpdef float irregular_crossentropy(float[:] p_x, float[:] p_y, float[:] q_x, flo
   # Further variables needed...
   cdef float p_x_next = 0.0, q_x_next = 0.0
   cdef float pt_next, qt_next, width
-  cdef float p0, p1 = -1, q0, q1 = 0, log_q0, log_q1 = -150
+  cdef float p0, p1 = -1, q0, q1 = 0
+  cdef double log_q0, log_q1 = -150
   
   # Loop through the entirety of p, calculating for each segment in turn...
   while pi+1 < p_x.shape[0]:
