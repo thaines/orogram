@@ -40,6 +40,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   cdef float[:] old_x
   cdef float[:] old_p
   cdef float[:] old_mass
+  cdef long[:] to_old
   
   if bad>0:
     old_x = x
@@ -49,6 +50,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
     x = numpy.empty(old_x.shape[0] - bad, dtype=numpy.float32)
     p = numpy.empty(x.shape[0], dtype=numpy.float32)
     mass = numpy.empty(x.shape[0], dtype=numpy.float32)
+    to_old = numpy.empty(x.shape[0], dtype=int)
     
     with nogil:
       j = 0
@@ -57,6 +59,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
           x[j] = old_x[i]
           p[j] = old_p[i]
           mass[j] = old_mass[i]
+          to_old[j] = i
           j += 1
 
   # Use the mass to calculate the prior ratio, as in the change in negative log liklihood given that the indexed point is included...
@@ -65,7 +68,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   
   with nogil:
     for i in range(p_rat.shape[0]):
-      p_rat[i] = -log(exp(samples*mass[i]/perbin) - 1)
+      p_rat[i] = -log(exp(samples*mass[i]/perbin) - 1) if mass[i]>=1e-12 else 0.0
       priorall += p_rat[i]
   
   # We need multiple data structures with data for all pairs of x indices; to pack them in we use 1D arrays where for two indices, i and j with i<j, we can find the value for the given pair at <some array>[index[i] + j - i - 1]
@@ -214,7 +217,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   # Extract the return information and package it all up for the return...
   cdef numpy.ndarray retx = numpy.empty(nlen, dtype=numpy.float32)
   cdef numpy.ndarray retp = numpy.empty(nlen, dtype=numpy.float32)
-  cdef numpy.ndarray retk = numpy.zeros(x.shape[0], dtype=bool)
+  cdef numpy.ndarray retk = numpy.zeros(old_x.shape[0] if bad>0 else x.shape[0], dtype=bool)
   
   cdef float[:] rx = retx
   cdef float[:] rp = retp
@@ -228,7 +231,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
     i = rx.shape[0]-1
     rx[i] = x[bi]
     rp[i] = final_bm
-    rk[bi] = True
+    rk[to_old[bi] if bad>0 else bi] = True
     priorcost = p_rat[bi]
 
     while True:
@@ -238,7 +241,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
       i -= 1
       rx[i] = x[bi]
       rp[i] = cost_bm[index[bi] + ci - bi - 1]
-      rk[bi] = True
+      rk[to_old[bi] if bad>0 else bi] = True
       priorcost += p_rat[bi]
 
       if bi==0:
