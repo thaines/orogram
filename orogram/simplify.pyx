@@ -222,14 +222,15 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   cdef float priorcost
   
   with nogil:
-    i = rx.shape[0]-1
-    rx[i] = x[x.shape[0]-1]
-    rp[i] = final_bm
-    rk[x.shape[0]-1] = True
-    priorcost = p_rat[0]
-  
     bi = x.shape[0]-1
     ai = final_a
+    
+    i = rx.shape[0]-1
+    rx[i] = x[bi]
+    rp[i] = final_bm
+    rk[bi] = True
+    priorcost = p_rat[bi]
+
     while True:
       ci = bi
       bi = ai
