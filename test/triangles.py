@@ -72,6 +72,6 @@ print(f'  kl(model || solution) = {model3.kl(res3.solution):.6f}')
 plt.figure(figsize=[12, 6])
 plt.plot(*model3.graph())
 plt.plot(*res3.solution.graph())
-plt.savefig(f'pyramid31.svg')
+plt.savefig(f'pyramid33.svg')
 
 print()
