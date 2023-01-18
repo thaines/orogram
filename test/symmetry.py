@@ -69,8 +69,8 @@ print(f'  dominant triangles: {res1.dominant} | {res2.dominant} (per pair: {res1
 print()
 
 print('Indices kept (aligned):')
-forwards = ''.join([('T' if v else 'F') for v in res1.kept])
-backwards = ''.join([('T' if v else 'F') for v in res2.kept[::-1]])
+forwards = ''.join([('T' if v else '_') for v in res1.kept])
+backwards = ''.join([('T' if v else '_') for v in res2.kept[::-1]])
 
 for block in range(0, res1.kept.shape[0], 60):
   print('-> ' + forwards[block:block+60])
