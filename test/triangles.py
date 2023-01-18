@@ -41,7 +41,7 @@ for layer in range(6):
   base_model2.add(0.2 * numpy.arange(-layer, layer+1, dtype=float))
 
 model2 = orogram.Orogram(base_model2)
-res2 = model2.simplify(base_model2.sum(), 1)
+res2 = model2.simplify(base_model2.sum(), 8)
 
 print(f'  bins: {len(model2)} -> {len(res2.solution)}')
 print(f'  cost: {base_model2.sum()*model2.entropy() + res2.priorall:.3f} -> {res2.cost:.3f}')
