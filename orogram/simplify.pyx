@@ -33,7 +33,7 @@ cdef int tricmp(const void * lhs, const void * rhs) nogil:
   if cost_lhs<cost_rhs:
     return -1
   
-  if cost_rhs>cost_lhs:
+  if cost_lhs>cost_rhs:
     return 1
   
   return 0
