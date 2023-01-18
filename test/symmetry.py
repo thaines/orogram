@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # Copyright 2023 Tom SF Haines
 
-import sys, os
+import sys, os, time
 
 import numpy
 import matplotlib.pyplot as plt
@@ -26,10 +26,19 @@ base_model2.add(-data)
 
 # Convert and simplify both models...
 model1 = orogram.Orogram(base_model1)
-res1 = model1.simplify(data.shape[0], 16)
-
 model2 = orogram.Orogram(base_model2)
+print('Simplifying:')
+
+start = time.time()
+res1 = model1.simplify(data.shape[0], 16)
+end = time.time()
+print(f'  forwards simplification took {1000*(end-start):.3f}ms')
+
+start = time.time()
 res2 = model2.simplify(data.shape[0], 16)
+end = time.time()
+print(f'  backwards simplification took {1000*(end-start):.3f}ms')
+print()
 
 
 
