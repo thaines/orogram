@@ -56,6 +56,7 @@ print(f'  bins: {len(res1.solution)} | {len(res2.solution)}')
 print(f'  cost: {res1.cost:.3f} | {res2.cost:.3f}')
 print(f'  manual cost: {priorcost1 + data.shape[0]*model1.crossentropy(res1.solution):.3f} | {priorcost2 + data.shape[0]*model2.crossentropy(res2.solution):.3f}')
 print(f'  mass: {res1.solution._mass():.6f} | {res2.solution._mass():.6f}')
+print(f'  dominant triangles: {res1.dominant} | {res2.dominant} (per pair: {res1.dominant/(len(model1)*(len(model1)-1)//2):.1f} | {res2.dominant/(len(model2)*(len(model2)-1)//2):.1f})')
 print()
 
 print('Indices kept (aligned):')

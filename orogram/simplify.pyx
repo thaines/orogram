@@ -9,13 +9,39 @@ import numpy
 cimport numpy
 
 from libc.math cimport exp, log, fabs, INFINITY
+from libc.stdlib cimport malloc, free, realloc
+from libc.stdlib cimport qsort
 
 from .xentropy cimport section_crossentropy
 
 
 
+# A structure used internally to store the dyanmic programming state...
+cdef packed struct Triangle:
+  long ai 
+  long atri # Index of specific a in the tri array, as there are multiple options
+  long bi
+  # ci is always implicitly avaliable from indexing when needed
+  float cost # Cost upto b, including b prior ratio
+  float prob # Probability at b
+
+
+cdef int tricmp(const void * lhs, const void * rhs) nogil:
+  cdef float cost_lhs = (<Triangle*>lhs).cost
+  cdef float cost_rhs = (<Triangle*>rhs).cost
+  
+  if cost_lhs<cost_rhs:
+    return -1
+  
+  if cost_rhs>cost_lhs:
+    return 1
+  
+  return 0
+
+
+
 cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
-  """Simplifies an orogram by picking a subset of bin centers to keep; uses dynamic programing to find the maximum a posteriori with cross entropy as a substitute for not having the actual data. Main input is x[:] and p[:], two algined arrays describing an orogram. Because this is normalised you also provide how many samples were used to generate the input PDF; you also need to provide the prior, as the expected number of samples in each bin of the output — this is converted into the parameter of an exponential distribution (lambda = 1/perbin). The return is (new x, new p, cost of output, cost with prior term only, cost of prior term if all bins kept). Note that the costs are negative log probability and includes ratios for including the points it does relative to the, not being included, meaning it is not directly comparable to the cost if calculated manually. Cost of input is the cost of the input, which is just the sum of ratios for all entries; for comparison really."""
+  """Simplifies an orogram by picking a subset of bin centers to keep; uses dynamic programing to find the maximum a posteriori with cross entropy as a substitute for not having the actual data. Main input is x[:] and p[:], two algined arrays describing an orogram. Because this is normalised you also provide how many samples were used to generate the input PDF; you also need to provide the prior, as the expected number of samples in each bin of the output — this is converted into the parameter of an exponential distribution (lambda = 1/perbin). The return is (new x, new p, cost of output, cost with prior term only, cost of prior term if all bins kept, total number of dominant triangles that were stored). Note that the costs are negative log probability and includes ratios for including the points it does relative to the, not being included, meaning it is not directly comparable to the cost if calculated manually. Cost of input is the cost of the input, which is just the sum of ratios for all entries; for comparison really."""
   cdef long i, j, k, bad
   
   # Calculate the quantity of probability mass that snaps to every center in x, counting the number of zeroes while we're at it...
@@ -62,6 +88,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
           to_old[j] = i
           j += 1
 
+
   # Use the mass to calculate the prior ratio, as in the change in negative log liklihood given that the indexed point is included...
   cdef float[:] p_rat = numpy.empty(x.shape[0], dtype=numpy.float32)
   cdef float priorall = 0.0
@@ -70,6 +97,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
     for i in range(p_rat.shape[0]):
       p_rat[i] = -log(exp(samples*mass[i]/perbin) - 1) if mass[i]>=1e-12 else 0.0
       priorall += p_rat[i]
+  
   
   # We need multiple data structures with data for all pairs of x indices; to pack them in we use 1D arrays where for two indices, i and j with i<j, we can find the value for the given pair at <some array>[index[i] + j - i - 1]
   cdef long pairs = (x.shape[0] * (x.shape[0]-1)) // 2
@@ -100,119 +128,155 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
         mass_start[index[i] + j - i - 1] = ms
         mass_end[index[i] + j - i - 1] = me
   
-  # Create data structure to record the partial objective evaluations, for dyanmic programming. An upper triangular matrix where we record both the cost of the best solution and the index of the previous bin that 'won' the argmax. The index for the evaluation of R(b,c) is in cost[index[b] + c - b - 1] with the a selected by the argmin at the same position in the cost_a[] array. In addition the probability mass assigned to position b is recorded in cost_bm...
-  cdef float[:] cost = numpy.empty(pairs, dtype=numpy.float32)
-  cdef long[:] cost_a = numpy.empty(pairs, dtype=int)
-  cdef float[:] cost_bm = numpy.empty(pairs, dtype=numpy.float32)
   
-  # Fill in the data structure by solving the optimisation problem for each entry...
-  cdef long ai, bi, ci
-  cdef float am, bm
+  # We need a data structure to store the set of dominant options for each (b-c), where the PDF is constructed of triangles a-b-c from the bin centers of the input. This is effectively an upper-triangular matrix with multiple values in each cell. We use a 1D array of these, that gets realloc-ed each time it's too small, with indexing of the range for each cell from a pair of 1D array that are tehmselves indexed by the above index array!..
+  cdef long tri_size = 4 * pairs
+  cdef long tri_next = 0
   
-  cdef float best, best_bm, curr
-  cdef long best_a
+  cdef Triangle * tri = <Triangle*>malloc(tri_size * sizeof(Triangle))
   
-  cdef long final_a
-  cdef float final, final_bm
+  cdef long * tri_start = <long*>malloc(pairs * sizeof(long))
+  cdef long * tri_count = <long*>malloc(pairs * sizeof(long))
   
-  cdef float q0, q1
+  
+  # Calculate set of dominant options at every b-c combination — involves calculating the cost of every a-b-c and then filtering out all values of a that are dominated...
+  cdef long ai, bi, ci, atri
+  cdef float p_a, p_b, p_max
+  
+  cdef float q0, q1, total
   cdef double log_q0, log_q1
+  cdef Triangle last # The best solution in the final bin centre
   
   with nogil:
-    # First bin...
+    # First bin - bi is implicitely 0...
     for ci in range(1, x.shape[0]):
-      cost[index[0] + ci - 1] = p_rat[0]
-      cost_a[index[0] + ci - 1] = -1
-      cost_bm[index[0] + ci - 1] = 2 * mass_start[index[0] + ci - 1] / (x[ci] - x[0])
+      i = index[0] + ci - 0 - 1
+      
+      if tri_next==tri_size:
+        tri_size += pairs
+        tri = <Triangle*>realloc(tri, tri_size * sizeof(Triangle))
+      
+      tri_start[i] = tri_next
+      tri_count[i] = 1
+      
+      tri[tri_next].ai = -1
+      tri[tri_next].atri = -1
+      tri[tri_next].bi = 0
+      tri[tri_next].cost = p_rat[0]
+      tri[tri_next].prob = 2 * mass_start[i] / (x[ci] - x[0])
+      
+      tri_next += 1
     
-    # Middle bins...
+    # Middle bin centres...
     for bi in range(1, x.shape[0]-1):
       for ci in range(bi+1, x.shape[0]):
-        # Dummy values for best...
-        best = INFINITY
-        best_a = -1
-        best_bm = 0.0
-        
-        # Loop and calculate how good each a value is, to find the best...
+        i = index[bi] + ci - bi - 1
+        tri_start[i] = tri_next
+
+        # Loop ai and generate every triangle cost, dumping them onto the end of the tri array; note that we have to consider every dominate from ai as a possible previous cost...
         for ai in range(bi):
-          # Get the mass at points a and b, plus initalise curr with the relevent R() and inclusion prior ratio...
-          am = cost_bm[index[ai] + bi - ai - 1]
-          bm = mass_end[index[ai] + bi - ai - 1] + mass_start[index[bi] + ci - bi - 1]
-          bm -= p[bi] * 0.5 * (x[bi+1] - x[bi-1]) # Central bin gets double counted
-          bm /= 0.5 * (x[ci] - x[ai])
-          curr = cost[index[ai] + bi - ai - 1] + p_rat[bi]
-          
-          # Loop linear segments from a to b, summing in their cross entropy term...
-          q0 = am
-          log_q0 = log(q0) if q0>=1e-64 else -150
-          
-          for i in range(ai, bi):
-            t = (x[i+1] - x[ai]) / (x[bi] - x[ai])
-            q1 = (1-t)*am + t*bm
-            log_q1 = log(q1) if q1>=1e-64 else -150
-          
-            curr += samples * (x[i+1] - x[i]) * section_crossentropy(p[i], p[i+1], q0, q1, log_q0, log_q1)
+          j = index[ai] + bi - ai - 1
+          for atri in range(tri_start[j], tri_start[j]+tri_count[j]):
+            # Check we have storage...
+            if tri_next==tri_size:
+              tri_size += pairs
+              tri = <Triangle*>realloc(tri, tri_size * sizeof(Triangle))
             
-            q0 = q1
-            log_q0 = log_q1
+            # Need probability at a and b of the triangle...
+            p_a = tri[atri].prob
+            p_b = mass_end[j] + mass_start[i]
+            p_b -= p[bi] * 0.5 * (x[bi+1] - x[bi-1]) # Central bin gets double counted
+            p_b /= 0.5 * (x[ci] - x[ai])
+            
+            # Prepare cost to be the cost thus far plus the prior ratio...
+            total = tri[atri].cost + p_rat[bi]
+            
+            # Loop linear segments from a to b, summing in their cross entropy term...
+            q0 = p_a
+            log_q0 = log(q0) if q0>=1e-64 else -150
           
-          # If best thus far record...
-          if curr<best:
-            best = curr
-            best_a = ai
-            best_bm = bm
+            for k in range(ai, bi):
+              t = (x[k+1] - x[ai]) / (x[bi] - x[ai])
+              q1 = (1-t)*p_a + t*p_b
+              log_q1 = log(q1) if q1>=1e-64 else -150
+          
+              total += samples * (x[k+1] - x[k]) * section_crossentropy(p[k], p[k+1], q0, q1, log_q0, log_q1)
+            
+              q0 = q1
+              log_q0 = log_q1
+            
+            # Record and update...
+            tri[tri_next].ai = ai
+            tri[tri_next].atri = atri
+            tri[tri_next].bi = bi
+            tri[tri_next].cost = total
+            tri[tri_next].prob = p_b
+            tri_next += 1
         
-        # Record the best...
-        cost[index[bi] + ci - bi - 1] = best
-        cost_a[index[bi] + ci - bi - 1] = best_a
-        cost_bm[index[bi] + ci - bi - 1] = best_bm
-  
-    # Last bin - for this we need to identify which bin comes before the last (last is always included)...
-    final = INFINITY
-    final_a = -1
-    final_bm = 0.0
-    
-    bi = x.shape[0]-1
-    for ai in range(bi):
-      # Get the mass at points a and b, plus initalise curr with the relevent R() and inclusion prior ratio...
-      am = cost_bm[index[ai] + bi - ai - 1]
-      bm = 2 * mass_end[index[ai] + bi - ai - 1] / (x[bi] - x[ai])
-      curr = cost[index[ai] + bi - ai - 1] + p_rat[bi]
-      
-      # Loop linear segments from a to b, summing in their cross entropy term...
-      q0 = am
-      log_q0 = log(q0) if q0>=1e-64 else -150
-          
-      for i in range(ai, bi):
-        t = (x[i+1] - x[ai]) / (x[bi] - x[ai])
-        q1 = (1-t)*am + t*bm
-        log_q1 = log(q1) if q1>=1e-64 else -150
-          
-        curr += samples * (x[i+1] - x[i]) * section_crossentropy(p[i], p[i+1], q0, q1, log_q0, log_q1)
+        # Identify the dominant set and shrink it back down to only contain that — dominance is defined as lower cost and higher probability, so first sort by cost then loop keeping track of highest probability thus far, deleting all that are less...
+        tri_count[i] = tri_next - tri_start[i]
+        qsort(&tri[tri_start[i]], tri_count[i], sizeof(Triangle), &tricmp)
+        
+        p_max = tri[tri_start[i]].prob
+        tri_next = tri_start[i] + 1
+        
+        for atri in range(tri_start[i] + 1, tri_start[i] + tri_count[i]):
+          if tri[atri].prob > p_max:
+            p_max = tri[atri].prob
             
-        q0 = q1
-        log_q0 = log_q1
-      
-      # If best thus far record...
-      if curr<final:
-        final = curr
-        final_a = ai
-        final_bm = bm
-      
+            tri[tri_next] = tri[atri]
+            tri_next += 1
+
+        tri_count[i] = tri_next - tri_start[i]
+
+    # Last bin - can just grab the best as there are no future decisions to be made...
+    last.cost = INFINITY
+    last.bi = x.shape[0] - 1
+    
+    bi = last.bi
+    for ai in range(bi):
+      j = index[ai] + bi - ai - 1
+      for atri in range(tri_start[j], tri_start[j]+tri_count[j]):
+        # Need probability at a and b of the triangle...
+        p_a = tri[atri].prob
+        p_b = 2 * mass_end[j] / (x[bi] - x[ai])
+            
+        # Prepare cost to be the cost thus far plus the prior ratio...
+        total = tri[atri].cost + p_rat[bi]
+            
+        # Loop linear segments from a to b, summing in their cross entropy term...
+        q0 = p_a
+        log_q0 = log(q0) if q0>=1e-64 else -150
+          
+        for k in range(ai, bi):
+          t = (x[k+1] - x[ai]) / (x[bi] - x[ai])
+          q1 = (1-t)*p_a + t*p_b
+          log_q1 = log(q1) if q1>=1e-64 else -150
+          
+          total += samples * (x[k+1] - x[k]) * section_crossentropy(p[k], p[k+1], q0, q1, log_q0, log_q1)
+            
+          q0 = q1
+          log_q0 = log_q1
+        
+        # Check if it's the best thus far...
+        if total < last.cost:
+          last.ai = ai
+          last.atri = atri
+          last.cost = total
+          last.prob = p_b
+  
   
   # Count how many bins are in the best solution...
-  cdef long nlen = 1
-  # bi = x.shape[0]-1
-  ai = final_a
+  cdef long nlen = 0
+  cdef Triangle * targ = &last
   
   with nogil:
     while True:
       nlen += 1
-      ci = bi
-      bi = ai
-      if bi==0:
+      if targ.ai<0:
         break
-      ai = cost_a[index[bi] + ci - bi - 1]
+      targ = &tri[targ.atri]
+  
   
   # Extract the return information and package it all up for the return...
   cdef numpy.ndarray retx = numpy.empty(nlen, dtype=numpy.float32)
@@ -222,30 +286,28 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin):
   cdef float[:] rx = retx
   cdef float[:] rp = retp
   cdef numpy.uint8_t[:] rk = numpy.frombuffer(retk, dtype=numpy.uint8)
-  cdef float priorcost
+  cdef float priorcost = 0.0
   
   with nogil:
-    bi = x.shape[0]-1
-    ai = final_a
-    
+    targ = &last
     i = rx.shape[0]-1
-    rx[i] = x[bi]
-    rp[i] = final_bm
-    rk[to_old[bi] if bad>0 else bi] = True
-    priorcost = p_rat[bi]
 
     while True:
-      ci = bi
-      bi = ai
+      rx[i] = x[targ.bi]
+      rp[i] = targ.prob
+      rk[to_old[targ.bi] if bad>0 else targ.bi] = True
+      priorcost += p_rat[targ.bi]
+      
+      if targ.ai<0:
+        break
       
       i -= 1
-      rx[i] = x[bi]
-      rp[i] = cost_bm[index[bi] + ci - bi - 1]
-      rk[to_old[bi] if bad>0 else bi] = True
-      priorcost += p_rat[bi]
+      targ = &tri[targ.atri]
 
-      if bi==0:
-        break
-      ai = cost_a[index[bi] + ci - bi - 1]
 
-  return retx, retp, retk, final, priorcost, priorall
+  # Clean up the main data structure then return...
+  free(tri_count)
+  free(tri_start)
+  free(tri)
+
+  return retx, retp, retk, last.cost, priorcost, priorall, tri_next + 1
