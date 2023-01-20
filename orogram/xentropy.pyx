@@ -71,7 +71,7 @@ cpdef float irr_entropy(float[:] x, float[:] prob):
 
 
 
-cdef float section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1) nogil:
+cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1) nogil:
   """Solves integral for a linear section as needed to calculate cross entropy. Internals carefully ordered to maximise numerical stability, but really don't think that's required - just being paranoid."""
   # Early exit if it's zero...
   if p0<1e-12 and p1<1e-12:
