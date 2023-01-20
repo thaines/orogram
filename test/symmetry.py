@@ -29,13 +29,15 @@ model1 = orogram.Orogram(base_model1)
 model2 = orogram.Orogram(base_model2)
 print('Simplifying:')
 
+prior = numpy.sqrt(data.shape[0])
+
 start = time.time()
-res1 = model1.simplify(data.shape[0], 16)
+res1 = model1.simplify(data.shape[0], prior)
 end = time.time()
 print(f'  forwards simplification took {1000*(end-start):.3f}ms')
 
 start = time.time()
-res2 = model2.simplify(data.shape[0], 16)
+res2 = model2.simplify(data.shape[0], prior)
 end = time.time()
 print(f'  backwards simplification took {1000*(end-start):.3f}ms')
 print()

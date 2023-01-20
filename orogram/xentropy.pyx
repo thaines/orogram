@@ -77,10 +77,16 @@ cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double 
   if p0<1e-12 and p1<1e-12:
     return 0.0
   
-  # Second and third terms but only if not too close to the limit...
+  # Two ways of handling the second and third term — analytic version when stable, but when q0 and q1 are too close switch to the slower but more stable infinite series...
   cdef float ret = 0
   cdef float qdelta = q1 - q0
-  if fabs(qdelta)>1e-12:
+  cdef float qsum
+  cdef double mult, qinner, incprod, delta
+  cdef long n
+  
+  if fabs(qdelta)>1e-2:
+    # Fast analytic version when stable...
+    
     # Second term, partial division...
     ret = ((p1*q0*q0 - p0*q1*q1) * (log_q1 - log_q0)) / qdelta
     
@@ -89,7 +95,27 @@ cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double 
     
     # Remaining division required to get both terms correct...
     ret /= 2 * qdelta
-
+  
+  else:
+    # Slow version with infinite series when analytic would be unstable...
+    # Alternate second term...
+    qsum = q0 + q1
+    ret += 0.25 * (p1 - p0) * qdelta / qsum
+    
+    # Alternate third term...
+    mult = (p1*q0*q0 - p0*q1*q1) / (qsum*qsum)
+    qinner = qdelta / qsum
+    incprod = qinner
+    qinner *= qinner
+    
+    for n in range(1, 64, 2):  
+      delta = mult * incprod / (n + 2)
+      ret += delta
+      
+      if fabs(delta)<1e-64:
+        break
+      incprod *= qinner
+  
   # The first term...
   ret -= 0.5 * (p0*log_q0 + p1*log_q1)
   
