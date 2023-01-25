@@ -100,21 +100,22 @@ cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double 
     # Slow version with infinite series when analytic would be unstable...
     # Alternate second term...
     qsum = q0 + q1
-    ret += 0.25 * (p1 - p0) * qdelta / qsum
+    if qsum > 1e-12:
+      ret += 0.25 * (p1 - p0) * qdelta / qsum
     
-    # Alternate third term...
-    mult = (p1*q0*q0 - p0*q1*q1) / (qsum*qsum)
-    qinner = qdelta / qsum
-    incprod = qinner
-    qinner *= qinner
+      # Alternate third term...
+      mult = (p1*q0*q0 - p0*q1*q1) / (qsum*qsum)
+      qinner = qdelta / qsum
+      incprod = qinner
+      qinner *= qinner
     
-    for n in range(1, 64, 2):  
-      delta = mult * incprod / (n + 2)
-      ret += delta
+      for n in range(1, 64, 2):  
+        delta = mult * incprod / (n + 2)
+        ret += delta
       
-      if fabs(delta)<1e-64:
-        break
-      incprod *= qinner
+        if fabs(delta)<1e-64:
+          break
+        incprod *= qinner
   
   # The first term...
   ret -= 0.5 * (p0*log_q0 + p1*log_q1)
