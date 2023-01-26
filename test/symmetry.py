@@ -92,6 +92,11 @@ for v in data:
   fy[after-1] += (1-t)
   fy[after] += t
 
+fy[1] += fy[0]
+fy[0] = 0.0
+fy[-2] += fy[-1]
+fy[-1] = 0.0
+
 fy[0] /= 0.5 * (fx[1] - fx[0])
 for i in range(1, fy.shape[0]-1):
   fy[i] /= 0.5 * (fx[i+1] - fx[i-1])
