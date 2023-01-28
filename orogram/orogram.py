@@ -23,7 +23,7 @@ from .regorogram import RegOrogram
 SimplifyResult = namedtuple('SimplifyResult', ['solution', 'cost', 'kept', 'priorcost', 'priorall', 'dominant'])
 # solution = The Orogram that is the solution
 # cost - Cost of the solution
-# kept - Boolean array indicating which bin centers from the input have been kept (True if included in solution, False if not)
+# kept - Boolean array indicating which bin centres from the input have been kept (True if included in solution, False if not)
 # priorcost - Cost of the prior only; can get data term by subtracting this from cost
 # priorall - Cost of prior if all bins are included, as for the input. This plus the entropy multiplied by the sample count is the cost of the input.
 # dominant - Total number of dominant triangles generated, an indication of peak memory usage/efficiency as these are the triangles that have to be kept.
@@ -114,7 +114,7 @@ class Orogram:
 
 
   def prob(self, i):
-    """Given the index of a bin (or many - vectorised) returns the probability at the center of that bin. Note that this is a pdf, not a pmf, and you need linear interpolation to get between bins (which is what you get for arbitrary values if you call this object). The bins range from 0 to len(self)-1 inclusive; out of range indices will return 0."""
+    """Given the index of a bin (or many - vectorised) returns the probability at the centre of that bin. Note that this is a pdf, not a pmf, and you need linear interpolation to get between bins (which is what you get for arbitrary values if you call this object). The bins range from 0 to len(self)-1 inclusive; out of range indices will return 0."""
     if numpy.ndim(i)==0:
       return self._y[i] if i>=0 and i<self._y.shape[0] else 0.0
     
@@ -126,7 +126,7 @@ class Orogram:
 
 
   def __call__(self, x):
-    """Evaluates the probability at the given x, including linear interpolation between bin centers. Vectorised."""
+    """Evaluates the probability at the given x, including linear interpolation between bin centres. Vectorised."""
     return numpy.interp(x, self._x, self._y, 0.0, 0.0)
   
   
@@ -154,7 +154,7 @@ class Orogram:
   
   
   def graph(self):
-    """Returns two aligned vectors, as a conveniance function for generating the arrays to hand to a graph plotting function. Return is a tuple of (x, y), x being the bin center and y the probability."""
+    """Returns two aligned vectors, as a convenience function for generating the arrays to hand to a graph plotting function. Return is a tuple of (x, y), x being the bin centre and y the probability."""
     retx = self._x.view()
     rety = self._y.view()
     
@@ -175,9 +175,9 @@ class Orogram:
   
   @staticmethod
   def mixture(orograms, weights):
-    """Returns a new Orogram that is constructed as a mixture of orograms - inputs are a list of Orogram objects and a corresponding list of weights, matching up with each Orogram. Will handle any RegOrogram objects that are included. Note that the return value can have as many bin centers as all inputs combined (duplicates are merged), so doing this iteratively without some kind of simplification step is in general unwise."""
+    """Returns a new Orogram that is constructed as a mixture of orograms - inputs are a list of Orogram objects and a corresponding list of weights, matching up with each Orogram. Will handle any RegOrogram objects that are included. Note that the return value can have as many bin centres as all inputs combined (duplicates are merged), so doing this iteratively without some kind of simplification step is in general unwise."""
 
-    # Extract the list of bin centers...
+    # Extract the list of bin centres...
     centers = numpy.concatenate([Orogram._fetchx(og) for og in orograms])
     
     # Sort and dedup...
@@ -187,7 +187,7 @@ class Orogram:
     numpy.not_equal(centers[1:], centers[:-1], out=unique[1:])
     centers = centers[unique]
     
-    # Sample mixture at each center...
+    # Sample mixture at each centre...
     values = numpy.zeros(centers.shape, dtype=numpy.float32)
     div = sum(weights)
     
@@ -200,9 +200,9 @@ class Orogram:
   
   @staticmethod
   def product(orograms):
-    """Returns a new Orogram that is constructed as a product of ororams - input is a list of Orogram objects; it is renormalised. It can raise a ZeroDivisionError exception if the intersection of probability mass is null. Will handle any RegOrogram objects that are included. Note that the return value can have as many bin centers as all inputs combined (duplicates are merged), so doing this iteratively without some kind of simplification step is in general unwise."""
+    """Returns a new Orogram that is constructed as a product of ororams - input is a list of Orogram objects; it is renormalised. It can raise a ZeroDivisionError exception if the intersection of probability mass is null. Will handle any RegOrogram objects that are included. Note that the return value can have as many bin centres as all inputs combined (duplicates are merged), so doing this iteratively without some kind of simplification step is in general unwise."""
     
-    # Extract the list of bin centers...
+    # Extract the list of bin centres...
     centers = numpy.concatenate([Orogram._fetchx(og) for og in orograms])
     
     # Sort and dedup...
@@ -212,7 +212,7 @@ class Orogram:
     numpy.not_equal(centers[1:], centers[:-1], out=unique[1:])
     centers = centers[unique]
     
-    # Sample mixture at each center...
+    # Sample mixture at each centre...
     values = numpy.ones(centers.shape, dtype=numpy.float32)
     
     for og in orograms:
@@ -228,12 +228,12 @@ class Orogram:
 
 
   def bincdf(self, i):
-    """Evaluates the cdf at the given bin center. Vectorised."""
+    """Evaluates the cdf at the given bin centre. Vectorised."""
     return numpy.take(self._cdf, i, mode='clip')
 
 
   def cdfgraph(self):
-    """Returns two aligned vectors, as a conveniance function for generating the arrays to hand to a graph plotting function to get the cdf. Return is a tuple of (x, y), x being the bin center and y the cdf."""
+    """Returns two aligned vectors, as a convenience function for generating the arrays to hand to a graph plotting function to get the cdf. Return is a tuple of (x, y), x being the bin centre and y the cdf."""
     retx = self._x.view()
     rety = self._cdf.view()
     
@@ -312,12 +312,12 @@ class Orogram:
 
 
   def crossentropy(self, q):
-    """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding."""
+    """Calculates the cross entropy, H(p=self, q=first parameter), outputting nats. If you're measuring the inefficiency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding."""
     return xentropy.irregular_crossentropy(self._x, self._y, q._x, q._y)
 
 
   def crossentropynumint(self, q, samples=1024*1024, threshold=1e-12):
-    """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses numerical integration and exists for testing only - slow."""
+    """Calculates the cross entropy, H(p=self, q=first parameter), outputting nats. If you're measuring the inefficiency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses numerical integration and exists for testing only - slow."""
     
     # Evaluate p across range of self distribution...
     x = numpy.linspace(self._x[0], self._x[-1], samples)
@@ -332,12 +332,12 @@ class Orogram:
     # Evaluate log(q)... 
     qlog = numpy.log(numpy.maximum(q(x), 1e-32))
     
-    # Crossentropy!..
+    # Cross entropy!..
     return -delta * (p * qlog).sum()
 
 
   def crossentropymc(self, q, samples=1024*1024, threshold=1e-12, rng=None):
-    """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses monte-carlo itnergation and exists for testing only - super slow."""
+    """Calculates the cross entropy, H(p=self, q=first parameter), outputting nats. If you're measuring the inefficiency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses Monte-Carlo integration and exists for testing only - super slow."""
     
     # Draw and evaluate...
     x = self.draw(samples, rng)

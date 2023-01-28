@@ -18,12 +18,12 @@ from . import xentropy
 
 
 class RegOrogram:
-  """An orogram with regularly spaced bins - primarily for incremental data collection as regular spacing makes that easy. Has an automatically expanding range, based on a dictionary of blocks, so the only parameter of consequence is the spacing between adjacent bins. Typical usage is to collect data in this with a very fine spacing then simplify to an Orogram with variable spacing that is data driven. Functionality is still pretty rich, just incase you want to set a data-suitable bin width and use it as a direct density estimate."""
+  """An orogram with regularly spaced bins - primarily for incremental data collection as regular spacing makes that easy. Has an automatically expanding range, based on a dictionary of blocks, so the only parameter of consequence is the spacing between adjacent bins. Typical usage is to collect data in this with a very fine spacing then simplify to an Orogram with variable spacing that is data driven. Functionality is still pretty rich, just in case you want to set a data-suitable bin width and use it as a direct density estimate."""
   __slots__ = ('_spacing', '_blocksize', '_data', '_total', '_low', '_high', '_cdf')
   
   
   def __init__(self, spacing = 0.001, blocksize = 1024 * 16):
-    """spacing is how wide the bins are, as in bin center to bin center; blocksize is how many bin values to record in each block of the backing storage (you can usually leave this alone)."""
+    """spacing is how wide the bins are, as in bin centre to bin centre; blocksize is how many bin values to record in each block of the backing storage (you can usually leave this alone)."""
     self._spacing = spacing
     self._blocksize = blocksize
     
@@ -107,7 +107,7 @@ class RegOrogram:
   
   
   def binadd(self, base, density, total = None):
-    """Lets you add values directly to the bins, where those values can be seen as the number of samples worth of mass. The add function does the same thing if you give it weighted samples (weight=density) at the exact bin centers, but this is faster. base is the bin index of density[0]. You can optionally provide total, the sum of the density array if you know it."""
+    """Lets you add values directly to the bins, where those values can be seen as the number of samples worth of mass. The add function does the same thing if you give it weighted samples (weight=density) at the exact bin centres, but this is faster. base is the bin index of density[0]. You can optionally provide total, the sum of the density array if you know it."""
     regorofun.binadd(self._data, self._blocksize, base, density.astype(numpy.float32))
     
     if total is None:
@@ -121,17 +121,17 @@ class RegOrogram:
   
   
   def bake(self, cdf, start, end, weight = 1, vectorised = True):
-    """Lets you 'bake' an arbitrary distribution into this representation. You have to provide a function for evaluating the CDF of that distribution, plus the range to evaluate (it ensures the mass in the range sums to 1). By default it aweightssumes that the CDF functon is vectorised but you can indicate it is not (vectorised parameter); that will be slow however. Solves the linear equation so that the areas between the bin centers match the mass of the CDF. Note that baking is addative, so the values will be summed on top of anything already within the model, by default as though this is a single samples worth of evidence, but the 'weight' parameter lets you change that to whatever they want."""
+    """Lets you 'bake' an arbitrary distribution into this representation. You have to provide a function for evaluating the CDF of that distribution, plus the range to evaluate (it ensures the mass in the range sums to 1). By default it assumes that the CDF functon is vectorised but you can indicate it is not (vectorised parameter); that will be slow however. Solves the linear equation so that the areas between the bin centres match the mass of the CDF. Note that baking is additive, so the values will be summed on top of anything already within the model, by default as though this is a single samples worth of evidence, but the 'weight' parameter lets you change that to whatever they want."""
     
     # Calculate bin range...
     low = int(numpy.floor(start / self._spacing))
     high = int(numpy.ceil(end / self._spacing))
     
-    # Generate array of relevant bin centers...
+    # Generate array of relevant bin centres...
     centers = numpy.arange(low, high+1, dtype=numpy.float32)
     centers *= self._spacing
     
-    # Evaluate cdf at each bin center...
+    # Evaluate cdf at each bin centre...
     if vectorised:
       cummass = cdf(centers)
       
@@ -140,7 +140,7 @@ class RegOrogram:
       for i in range(cummass.shape[0]):
         cummass[i] = cdf(centers[i])
     
-    # Convert to mass between bin centers, renormalise, then drop into bin centers - this does smooth slihtly, but avoids the instability of attempting to optimise directly...
+    # Convert to mass between bin centres, renormalise, then drop into bin centres - this does smooth slightly, but avoids the instability of attempting to optimise directly...
     between = (cummass[1:] - cummass[:-1]).astype(numpy.float32)
     between /= between.sum()
     
@@ -159,7 +159,7 @@ class RegOrogram:
   
   
   def sum(self):
-    """Returns the sum of all the bins, in effect the total weight recorded. Note that it's a float because fractional weights can be added (plus weight is distributed between bin centers)."""
+    """Returns the sum of all the bins, in effect the total weight recorded. Note that it's a float because fractional weights can be added (plus weight is distributed between bin centres)."""
     return self._total
   
   
@@ -205,7 +205,7 @@ class RegOrogram:
   
   
   def prob(self, i):
-    """Given the index of a bin (or many - vectorised) returns the probability at the center of that bin. Note that this is a pdf, not a pmf, and you need linear interpolation to get between bins (which is what you get for arbitrary values if you call this object)."""
+    """Given the index of a bin (or many - vectorised) returns the probability at the centre of that bin. Note that this is a pdf, not a pmf, and you need linear interpolation to get between bins (which is what you get for arbitrary values if you call this object)."""
     if numpy.ndim(i)==0:
       block = i // self._blocksize
       if block in self._data:
@@ -222,7 +222,7 @@ class RegOrogram:
   
   
   def __call__(self, x):
-    """Evaluates the probability at the given x, including linear interpolation between bin centers. Vectorised."""
+    """Evaluates the probability at the given x, including linear interpolation between bin centres. Vectorised."""
     x = numpy.asarray(x) / self._spacing
     base = numpy.floor(x).astype(int)
     t = x - base
@@ -284,7 +284,7 @@ class RegOrogram:
   
   
   def graph(self, start = None, end = None):
-    """Returns two aligned vectors, as a conveniance function for generating the arrays to hand to a graph plotting function. Return is a tuple of (x, y), x being the bin center and y the probability. You can give the start and end bin if you want (inclusive, exclusive), but it defaults to the range of the observed data (going one wider so the end points have probability zero)."""
+    """Returns two aligned vectors, as a convenience function for generating the arrays to hand to a graph plotting function. Return is a tuple of (x, y), x being the bin centre and y the probability. You can give the start and end bin if you want (inclusive, exclusive), but it defaults to the range of the observed data (going one wider so the end points have probability zero)."""
     if start is None:
       start = self._low - 1
     
@@ -361,7 +361,7 @@ class RegOrogram:
   
   
   def cdfgraph(self, start = None, end = None):
-    """Returns two aligned vectors, as a conveniance function for generating the arrays to hand to a graph plotting function to get the cdf. Return is a tuple of (x, y), x being the bin center and y the cdf. You can give the start and end bin if you want (inclusive, exclusive), but it defaults to the range of the observed data (going one wider so the end points are 0 and 1). Note that the cdf is a cached value, recalculated and invalidated as required, so alternating this with an operation such as add() would be very slow."""
+    """Returns two aligned vectors, as a convenience function for generating the arrays to hand to a graph plotting function to get the cdf. Return is a tuple of (x, y), x being the bin centre and y the cdf. You can give the start and end bin if you want (inclusive, exclusive), but it defaults to the range of the observed data (going one wider so the end points are 0 and 1). Note that the cdf is a cached value, recalculated and invalidated as required, so alternating this with an operation such as add() would be very slow."""
     if start is None:
       start = self._low - 1
     
@@ -425,7 +425,7 @@ class RegOrogram:
   
   
   def meanvar(self):
-    """Returns a tuple containing (mean, variance). Calculation involves looping all data, so is not very efficient, but definitely more efficient than calling mean() and var() seperately."""
+    """Returns a tuple containing (mean, variance). Calculation involves looping all data, so is not very efficient, but definitely more efficient than calling mean() and var() separately."""
     weight = 0.0
     mean = 0.0
     scatter = 0.0
@@ -487,7 +487,7 @@ class RegOrogram:
   
   
   def crossentropy(self, q):
-    """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding."""
+    """Calculates the cross entropy, H(p=self, q=first parameter), outputting nats. If you're measuring the inefficiency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding."""
     if numpy.fabs(self._spacing - q._spacing) < 1e-12 and self._blocksize==q._blocksize:
       # Efficient version - the change points are aligned...
       return xentropy.aligned_crossentropy(self._blocksize, self._spacing, self._low-1, self._high+2, self._data, q._data, self._total, q._total)
@@ -498,7 +498,7 @@ class RegOrogram:
 
 
   def crossentropynumint(self, q, samples=1024*1024, threshold=1e-12):
-    """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses numerical integration and exists for testing only - slow."""
+    """Calculates the cross entropy, H(p=self, q=first parameter), outputting nats. If you're measuring the inefficiency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses numerical integration and exists for testing only - slow."""
     
     # Evaluate p across range of self distribution...
     x = numpy.linspace(self.center(self._low - 1), self.center(self._high + 2), samples)
@@ -518,7 +518,7 @@ class RegOrogram:
 
 
   def crossentropymc(self, q, samples=1024*1024, threshold=1e-12, rng=None):
-    """Calculates the cross entropy, H(p=self, q=first parameter), outputing nats. If you're measuring the inefficency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses monte-carlo itnergation and exists for testing only - super slow."""
+    """Calculates the cross entropy, H(p=self, q=first parameter), outputting nats. If you're measuring the inefficiency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses Monte-Carlo integration and exists for testing only - super slow."""
     
     # Draw and evaluate...
     x = self.draw(samples, rng)
@@ -529,5 +529,5 @@ class RegOrogram:
   
   
   def kl(self, q):
-    """Calculates the Kullback—Leibler divergence between two distributions, i.e. the expected extra nats needed for encoding data with the distrbution represented by this object when the encoder is optimised for the distribution of q, the first parameter to this method. Convenience method that uses the cross-entropy and entropy methods."""
+    """Calculates the Kullback—Leibler divergence between two distributions, i.e. the expected extra nats needed for encoding data with the distribution represented by this object when the encoder is optimised for the distribution of q, the first parameter to this method. Convenience method that uses the cross-entropy and entropy methods."""
     return self.crossentropy(q) - self.entropy()

@@ -16,12 +16,12 @@ from .xentropy cimport section_crossentropy
 
 
 
-# A structure used internally to store the dyanmic programming state...
+# A structure used internally to store the dynamic programming state...
 cdef packed struct Triangle:
   long ai 
   long atri # Index of specific a in the tri array, as there are multiple options
   long bi
-  # ci is always implicitly avaliable from indexing when needed
+  # ci is always implicitly available from indexing when needed
   float cost # Cost upto b, including b prior ratio
   float prob # Probability at b
 
@@ -41,10 +41,10 @@ cdef int tricmp(const void * lhs, const void * rhs) nogil:
 
 
 cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin, bint continuous):
-  """Simplifies an orogram by picking a subset of bin centers to keep; uses dynamic programing to find the maximum a posteriori with cross entropy as a substitute for not having the actual data. Main input is x[:] and p[:], two algined arrays describing an orogram. Because this is normalised you also provide how many samples were used to generate the input PDF; you also need to provide the prior, as the expected number of samples in each bin of the output — this is converted into the parameter of an exponential distribution (lambda = 1/perbin). Final parameter is True/False; if True it forces the output distribution to go to zero at the start/end, so it can't have start/end with a discontinuity. The return is (new x, new p, cost of output, cost with prior term only, cost of prior term if all bins kept, total number of dominant triangles that were stored). Note that the costs are negative log probability and includes ratios for including the points it does relative to the, not being included, meaning it is not directly comparable to the cost if calculated manually. Cost of input is the cost of the input, which is just the sum of ratios for all entries; for comparison really."""
+  """Simplifies an orogram by picking a subset of bin centres to keep; uses dynamic programming to find the maximum a posteriori with cross entropy as a substitute for not having the actual data. Main input is x[:] and p[:], two aligned arrays describing an orogram. Because this is normalised you also provide how many samples were used to generate the input PDF; you also need to provide the prior, as the expected number of samples in each bin of the output — this is converted into the parameter of an exponential distribution (lambda = 1/perbin). Final parameter is True/False; if True it forces the output distribution to go to zero at the start/end, so it can't have start/end with a discontinuity. The return is (new x, new p, cost of output, cost with prior term only, cost of prior term if all bins kept, total number of dominant triangles that were stored). Note that the costs are negative log probability and includes ratios for including the points it does relative to the, not being included, meaning it is not directly comparable to the cost if calculated manually. Cost of input is the cost of the input, which is just the sum of ratios for all entries; for comparison really."""
   cdef long i, j, k, bad
   
-  # Calculate the quantity of probability mass that snaps to every center in x, counting the number of zeroes while we're at it...
+  # Calculate the quantity of probability mass that snaps to every centre in x, counting the number of zeroes while we're at it...
   cdef float[:] mass = numpy.empty(x.shape[0], dtype=numpy.float32)
   bad = 0
   
@@ -89,7 +89,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin, bint continu
           j += 1
 
 
-  # Use the mass to calculate the prior ratio, as in the change in negative log liklihood given that the indexed point is included...
+  # Use the mass to calculate the prior ratio, as in the change in negative log likelihood given that the indexed point is included...
   cdef float[:] p_rat = numpy.empty(x.shape[0], dtype=numpy.float32)
   cdef float priorall = 0.0
   
@@ -139,7 +139,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin, bint continu
             mass_end[index[i] + j - i - 1] = 0.0
   
   
-  # We need a data structure to store the set of dominant options for each (b-c), where the PDF is constructed of triangles a-b-c from the bin centers of the input. This is effectively an upper-triangular matrix with multiple values in each cell. We use a 1D array of these, that gets realloc-ed each time it's too small, with indexing of the range for each cell from a pair of 1D array that are tehmselves indexed by the above index array!..
+  # We need a data structure to store the set of dominant options for each (b-c), where the PDF is constructed of triangles a-b-c from the bin centres of the input. This is effectively an upper-triangular matrix with multiple values in each cell. We use a 1D array of these, that gets realloc-ed each time it's too small, with indexing of the range for each cell from a pair of 1D array that are themselves indexed by the above index array!..
   cdef long tri_size = 4 * pairs
   cdef long tri_next = 0
   
@@ -158,7 +158,7 @@ cpdef tuple dp(float[:] x, float[:] p, float samples, float perbin, bint continu
   cdef Triangle last # The best solution in the final bin centre
   
   with nogil:
-    # First bin - bi is implicitely 0...
+    # First bin - bi is implicitly 0...
     for ci in range(1, x.shape[0]):
       i = index[0] + ci - 0 - 1
       
