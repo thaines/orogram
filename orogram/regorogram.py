@@ -373,7 +373,17 @@ class RegOrogram:
     rety = self.bincdf(i)
     
     return retx, rety
-
+  
+  
+  def invcdf(self, uni):
+    """Evaluates the inverse cdf for the given value in [0, 1); if the value was drawn from a uniform distribution then this is identical to draw(). Vectorised. Note that this uses the cdf which is a cached value, recalculated and invalidated as required, so alternating this with an operation such as add() would be very slow."""
+    self._ensure_cdf()
+    
+    after = numpy.searchsorted(self._cdf, uni)
+    t = (uni - self._cdf[after-1]) / (self._cdf[after] - self._cdf[after-1])
+    
+    return ((after - 1 + t) + (self._low - 1)) * self._spacing
+    
 
   def draw(self, size = None, rng = None):
     """Draws samples from the distribution - first parameter is how many (defaults to None, which is one sample, not in an array; can be a tuple for a nD array), second something that numpy.random.default_rng() is happy to accept. Note that this uses the cdf (inverse cdf transform) which is a cached value, recalculated and invalidated as required, so alternating this with an operation such as add() would be very slow."""
@@ -384,11 +394,7 @@ class RegOrogram:
     noise = rng.random(size, dtype=numpy.float32)
     
     # Do the inverse CDF dance...
-    after = numpy.searchsorted(self._cdf, noise)
-    t = (noise - self._cdf[after-1]) / (self._cdf[after] - self._cdf[after-1])
-    
-    x = ((after - 1 + t) + (self._low - 1)) * self._spacing
-    return x
+    return self.invcdf(noise)
 
 
   def median(self):

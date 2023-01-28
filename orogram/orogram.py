@@ -242,7 +242,15 @@ class Orogram:
     
     return retx, rety
 
-
+  
+  def invcdf(self, uni):
+    """Evaluates the inverse cdf for the given value in [0, 1); if the value was drawn from a uniform distribution then this is identical to draw(). Vectorised."""
+    after = numpy.searchsorted(self._cdf, uni)
+    t = (uni - self._cdf[after-1]) / (self._cdf[after] - self._cdf[after-1])
+    
+    return (1-t) * self._x[after-1] + t * self._x[after]
+  
+  
   def draw(self, size = None, rng = None):
     """Draws samples from the distribution - first parameter is how many (defaults to None, which is one sample, not in an array; can be a tuple for a nD array), second something that numpy.random.default_rng() is happy to accept."""
     
@@ -251,10 +259,7 @@ class Orogram:
     noise = rng.random(size, dtype=numpy.float32)
     
     # Do the inverse CDF dance...
-    after = numpy.searchsorted(self._cdf, noise)
-    t = (noise - self._cdf[after-1]) / (self._cdf[after] - self._cdf[after-1])
-    
-    return (1-t) * self._x[after-1] + t * self._x[after]
+    return self.invcdf(noise)
 
 
   def median(self):
