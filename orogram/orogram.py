@@ -55,6 +55,9 @@ class Orogram:
     if norm:
       total = mass.sum()
       self._y /= total
+      
+      if cdf is None:
+        mass /= total
     
     # Lil' safety...
     assert(len(self._x.shape)==1)
