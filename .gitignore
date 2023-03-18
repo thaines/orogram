@@ -3,6 +3,7 @@ __pycache__
 build
 dist
 Orogram.egg-info
+todo.txt
 *.c
 *.svg
 

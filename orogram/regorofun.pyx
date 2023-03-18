@@ -63,7 +63,33 @@ cpdef int length(dic, long blocksize, long low, long high):
 
 
 
-cpdef void add(dic, long blocksize, long[:] base, float[:] t, float[:] w):
+cpdef void add(dic, long blocksize, long[:] base, float[:] w):
+  cdef long i, bi
+  
+  cdef long blockindex = (base[0] // blocksize) - 1
+  cdef long blockbase = 0
+  cdef float[:] block = None
+  
+  with nogil:
+    for i in range(base.shape[0]):
+
+      bi = base[i] // blocksize
+      if bi!=blockindex:
+        blockindex = bi
+        blockbase = blockindex * blocksize
+        with gil:
+          if bi not in dic:
+            newblock = numpy.zeros(blocksize, dtype=numpy.float32)
+            dic[bi] = newblock
+            block = newblock
+          else:
+            block = dic[bi]
+    
+      block[base[i] - blockbase] += w[i]
+
+
+
+cpdef void smoothadd(dic, long blocksize, long[:] base, float[:] t, float[:] w):
   cdef long i, bi
   
   cdef long blockindex = (base[0] // blocksize) - 1

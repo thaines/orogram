@@ -18,7 +18,7 @@ from . import xentropy
 
 
 class RegOrogram:
-  """An orogram with regularly spaced bins - primarily for incremental data collection as regular spacing makes that easy. Has an automatically expanding range, based on a dictionary of blocks, so the only parameter of consequence is the spacing between adjacent bins. Typical usage is to collect data in this with a very fine spacing then simplify to an Orogram with variable spacing that is data driven. Functionality is still pretty rich, just in case you want to set a data-suitable bin width and use it as a direct density estimate."""
+  """An orogram with regularly spaced bins - primarily for incremental data collection as regular spacing makes that easy. Note that this is exactly equivalent to the frequency polygon due to the regular spacing. Has an automatically expanding range, based on a dictionary of blocks, so the only parameter of consequence is the spacing between adjacent bins. Typical usage is to collect data in this with a very fine spacing then simplify to an Orogram with variable spacing that is data driven. Functionality is still pretty rich, just in case you want to set a data-suitable bin width and use it as a direct density estimate."""
   __slots__ = ('_spacing', '_blocksize', '_data', '_total', '_low', '_high', '_cdf')
   
   
@@ -88,26 +88,32 @@ class RegOrogram:
     return self._blocksize
   
   
-  def add(self, x, weight = 1.0):
-    """Adds the set of samples x (single value or array) to the orogram. Can optionally include a weight, to count each sample as being some multiple of one (single value or array; broadcast as required)."""
+  def add(self, x, weight = 1.0, smooth=False):
+    """Adds the set of samples x (single value or array) to the orogram. Can optionally include a weight, to count each sample as being some multiple of one (single value or array; broadcast as required). With the final parameter, smooth, if it is False you get the maximum likelihood estimate, i.e. it's the same as a histogram because it adds all of the weight to the closest bin, as that will increase the probability of the point the most. This is arguably the correct mode, hence being the default. If changed to True however it interpolates the weight between bins, which gives a smoother result but one that is no longer the most probable."""
     x = numpy.atleast_1d(x)
     weight = numpy.broadcast_to(weight, x.shape).astype(numpy.float32)
     
     x = x / self._spacing
-    base = numpy.floor(x).astype(int)
-    t = (x - base).astype(numpy.float32)
     
-    regorofun.add(self._data, self._blocksize, base, t, weight)
+    if smooth:
+      base = numpy.floor(x).astype(int)
+      t = (x - base).astype(numpy.float32)
+      regorofun.smoothadd(self._data, self._blocksize, base, t, weight)
+    
+    else:
+      base = numpy.floor(x+0.5).astype(int)
+      regorofun.add(self._data, self._blocksize, base, weight)
+      
     
     self._total += weight.sum()
     self._low = min(self._low, base.min())
-    self._high = max(self._high, base.max() + 1)
+    self._high = max(self._high, base.max() + (1 if smooth else 0))
     
     self._cdf = None
   
   
   def binadd(self, base, density, total = None):
-    """Lets you add values directly to the bins, where those values can be seen as the number of samples worth of mass. The add function does the same thing if you give it weighted samples (weight=density) at the exact bin centres, but this is faster. base is the bin index of density[0]. You can optionally provide total, the sum of the density array if you know it."""
+    """Lets you add values directly to the bins, where those values can be seen as the number of samples worth of mass. The add function can be made to do the same, but this is faster if you already have data in this form. base is the bin index of density[0]. You can optionally provide total, the sum of the density array if you know it."""
     regorofun.binadd(self._data, self._blocksize, base, density.astype(numpy.float32))
     
     if total is None:
