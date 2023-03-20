@@ -18,7 +18,7 @@ from . import xentropy
 
 
 class RegOrogram:
-  """An orogram with regularly spaced bins - primarily for incremental data collection as regular spacing makes that easy. Note that this is exactly equivalent to the frequency polygon due to the regular spacing. Has an automatically expanding range, based on a dictionary of blocks, so the only parameter of consequence is the spacing between adjacent bins. Typical usage is to collect data in this with a very fine spacing then simplify to an Orogram with variable spacing that is data driven. Functionality is still pretty rich, just in case you want to set a data-suitable bin width and use it as a direct density estimate."""
+  """An orogram with regularly spaced bins - primarily for incremental data collection as regular spacing makes that easy. Note that this is exactly equivalent to the frequency polygon due to the regular spacing. Has an automatically expanding range, based on a dictionary of blocks, so the only parameter of consequence is the spacing between adjacent bins. Typical usage is to collect data in this with a very fine spacing then simplify to an Orogram with variable spacing that is data driven. Functionality is still pretty rich, just in case you want to set a data-suitable bin width and use it as a direct density estimate. This class is only robust to 10s of millions of samples; after that the numerical precision of float will start to bite. If that is the case fit an orogram to blocks, scale down (*=) and sum (+=)."""
   __slots__ = ('_spacing', '_blocksize', '_data', '_total', '_low', '_high', '_cdf')
   
   
@@ -443,17 +443,16 @@ class RegOrogram:
     mean = 0.0
     scatter = 0.0
     
+    pos = numpy.arange(self._blocksize) * self._spacing
+    
     for k,v in self._data.items():
       # Block weight, mean and scatter (variance * weight)...
       bw = v.sum()
+      blm = (pos * v).sum() / bw
+      bm = k * self._blocksize * self._spacing + blm
+      bs = ((numpy.square(self._spacing) / 6 + numpy.square(pos)) * v).sum() - numpy.square(blm) * bw
       
-      pos = numpy.arange(self._blocksize)
-      m = (pos * v).sum() / bw
-      bm = (k * self._blocksize + m) * self._spacing
-      
-      bs = (numpy.square(pos - m) * v).sum() * numpy.square(self._spacing)
-      
-      # Incrementally combine into parameters thus far...
+      # Incrementally combine into statistics thus far...
       old_weight = weight
       weight += bw
       delta = bm - mean

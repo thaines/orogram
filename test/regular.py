@@ -14,7 +14,7 @@ import orogram
 # Run through basic features to check it at least runs and behaves sensibly...
 model = orogram.RegOrogram(0.5)
 rng = numpy.random.default_rng(0)
-data = rng.standard_normal(1024)
+data = rng.standard_normal(1024*1024) * 2
 
 
 print(f'sizeof before data = {sys.getsizeof(model)}')
