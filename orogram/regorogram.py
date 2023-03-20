@@ -195,7 +195,7 @@ class RegOrogram:
 
 
   def weight(self, i):
-    """Given the index of a bin (or many - vectorised) returns how much weight has landed in that bin. This is sort of the number of samples that have landed in that bin, noting that because it's triangular each sample gets split between adjacent bins."""
+    """Given the index of a bin (or many - vectorised) returns how much weight has landed in that bin. This is often the number of samples that have landed in that bin."""
     if numpy.ndim(i)==0:
       block = i // self._blocksize
       if block in self._data:
@@ -305,7 +305,7 @@ class RegOrogram:
 
 
   def __iadd__(self, other):
-    """Allows you to add the data collected in another RegOrogram into this one (+=). Will be efficient and without data loss if the spacing and block size match, otherwise it will switch to interpolating bin positions."""
+    """Allows you to add the data collected in another RegOrogram into this one (+=). Will be efficient and without data loss if the spacing and block size match, otherwise it will switch to interpolating bin positions. Note that the interpolation will have a smoothing effect."""
     if numpy.fabs(self._spacing - other._spacing) < 1e-12 and self._blocksize==other._blocksize:
       # Efficient version...
       for k, v in other._data.items():
@@ -321,7 +321,7 @@ class RegOrogram:
       for k, v in other._data.items():
         x = other.center(k + indices)
         send = numpy.nonzero(v)
-        self.add(x[send], v[send])
+        self.add(x[send], v[send], True)
     
     # Update the stats...
     self._total += other._total
@@ -418,6 +418,7 @@ class RegOrogram:
     weight = 0.0
     mean = 0.0
     
+    # This works because the triangles are symmetric...
     for k,v in self._data.items():
       # Block mean...
       bw = v.sum()
