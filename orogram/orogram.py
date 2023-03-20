@@ -31,12 +31,12 @@ SimplifyResult = namedtuple('SimplifyResult', ['solution', 'cost', 'kept', 'prio
 
 
 class Orogram:
-  """An orogram with irregularly spaced bins - an arbitrary piecewise linear PDF in other words. The function is fixed on construction - this is immutable. Has a fairly rich interface."""
+  """An orogram with irregularly spaced bins - an arbitrary piecewise linear PDF in other words. There is a direct equivalence to a histogram with uneven bin sizes, in terms of the maximum liklihood solutions of both having the same weights (but note it is not a frequency polygon, because the bin centers of an Orogram are not at the centers of the equivalent uneven histogram bins). The distribution is fixed on construction - this is immutable. Has a fairly rich interface."""
   __slots__ = ('_x', '_y', '_cdf')
   
   
   def __init__(self, x, y = None, cdf = None, norm=True, copy=True):
-    """You construct it with two 1D arrays, containing x and y that define the values that make up the distribution. x must be increasing, all y's must be positive. By default it will renormalise if the area under the line is not one, but set norm=False if you can guarantee that is already the case. Note that it internally keeps a cdf, aligned with x/y - can provide if already calculated. Can alternatively provide a RegOrogram which it will automatically convert."""
+    """You construct it with two 1D arrays, containing x and y that define the values that make up the distribution. x must be increasing, all y's must be positive. By default it will renormalise if the area under the line is not one, but set norm=False if you can guarantee that is already the case. Note that it internally keeps a cdf, aligned with x/y - can provide if already calculated. Can alternatively provide a RegOrogram which it will automatically convert. The copy parameter defaults to True, but if you are giving it arrays that you won't be using again you can set it to False to avoid wasteful memory allocations."""
     
     # Handle request to convert a regular orogram...
     if isinstance(x, RegOrogram):
@@ -275,17 +275,81 @@ class Orogram:
 
   def mean(self):
     """Returns the mean."""
-    return numpy.average(self._x, weights=self._y)
+    
+    # Individual triangular bins means aren't the centre values...
+    m = self._x.copy()
+    m[0] += self._x[0]
+    m[1:] += self._x[:-1]
+    m[-1] += self._x[-1]
+    m[:-1] += self._x[1:]
+    m *= 1 / 3
+    
+    # The weights are not the probabilities - need to scale by triangle area to get mass...
+    w = numpy.empty(self._y.shape[0], dtype=numpy.float32)
+    
+    w[:-1] = self._x[1:]
+    w[-1] = self._x[-1]
+    w[0] -= self._x[0]
+    w[1:] -= self._x[:-1]
+    
+    w *= self._y
+    w /= w.sum()
+    
+    # Can now calculate the mean with the corrected means...
+    return numpy.average(m, weights=w)
 
 
   def var(self):
     """Returns the variance."""
-    return numpy.cov(self._x, aweights=self._y).item()
+    return self.meanvar()[1]
 
 
   def meanvar(self):
     """Returns a tuple containing (mean, variance)."""
-    return mean(), var()
+    
+    # Calculate correct means for each bin...
+    m = self._x.copy()
+    m[0] += self._x[0]
+    m[1:] += self._x[:-1]
+    m[-1] += self._x[-1]
+    m[:-1] += self._x[1:]
+    m /= 3
+    
+    # Calculate correct weights for each bin...
+    w = numpy.empty(self._y.shape[0], dtype=numpy.float32)
+    
+    w[:-1] = self._x[1:]
+    w[-1] = self._x[-1]
+    w[0] -= self._x[0]
+    w[1:] -= self._x[:-1]
+    
+    w *= self._y
+    w /= w.sum()
+    
+    # Calculate the variance for each bin...
+    v = numpy.square(self._x)
+    v[0] += numpy.square(self._x[0])
+    v[1:] += numpy.square(self._x[:-1])
+    v[-1] += numpy.square(self._x[-1])
+    v[:-1] += numpy.square(self._x[1:])
+    
+    v[0] -= numpy.square(self._x[0])
+    v[1:] -= self._x[:-1] * self._x[1:]
+    
+    v[0] -= self._x[0] * self._x[1]
+    v[1:-1] -= self._x[:-2] * self._x[2:]
+    v[-1] -= self._x[-2] * self._x[-1]
+    
+    v[:-1] -= self._x[:-1] * self._x[1:]
+    v[-1] -= numpy.square(self._x[-1])
+    
+    v /= 18
+    
+    # Bring it all together...
+    mean = numpy.average(m, weights=w)
+    var = (w * (v + numpy.square(m))).sum() - numpy.square(mean)
+    
+    return mean, var
 
 
   def entropy(self):

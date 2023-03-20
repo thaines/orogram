@@ -38,3 +38,7 @@ for samples, perbin in [(16,16), (64,16), (256,16), (1024,16), (1024,1), (1024,1
   plt.savefig(f'gaussian,samples={samples},perbin={perbin}.svg')
   
   print()
+  
+  print(f'  mean: {base_model.mean():.3f} = {model.mean():.3f} -> {res.solution.mean():.3f}')
+  print(f'   var: {base_model.var():.3f} = {model.var():.3f} -> {res.solution.var():.3f}')
+  print()
