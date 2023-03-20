@@ -32,9 +32,14 @@ for samples, perbin in [(16,16), (64,16), (256,16), (1024,16), (1024,1), (1024,1
   print(f'  kl(model || solution) = {model.kl(res.solution):.6f}')
   print(f'  time = {1000*(end - start):.3f}ms')
   
+  hg_edges, hg_mass = res.solution.histogram()
+  hgx = numpy.repeat(hg_edges, 2)[1:-1]
+  hgy = numpy.repeat(hg_mass / (hg_edges[1:] - hg_edges[:-1]), 2)
+  
   plt.figure(figsize=[12, 6])
   plt.plot(*model.graph())
   plt.plot(*res.solution.graph())
+  plt.plot(hgx, hgy, ':',  linewidth=0.75)
   plt.savefig(f'gaussian,samples={samples},perbin={perbin}.svg')
   
   print()

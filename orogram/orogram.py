@@ -167,6 +167,31 @@ class Orogram:
     return retx, rety
   
   
+  def histogram(self):
+    """An Orogram can be interpreted as a histogram with variable bin widths, though note that the objective of simplify() is not this histogram, so doing that then using this is not really correct. But it still might be conveniant/useful hence providing an interface to grab it as it's not trivial to calculate (edges are not half way between bin centers unless it's regular; this is not a frequency polygon). If you accept the dodgyness and are using this as a hack to get an irregular histogram you propbably want to switch off the snapping to zero at the start/end when simplifying (continuous=False). Return is (edges, mass), where edges is a list of all bin edges and mass is the total probability mass between each pair of edges (not height!). The edges array is one longer than the mass array."""
+    
+    # Calculate the edges in the central region then extend...
+    xm1 = numpy.pad(self._x[:-2], (1,0), 'edge')
+    xp2 = numpy.pad(self._x[2:], (0,1), 'edge')
+    
+    t = xp2 - self._x[:-1]
+    t /= xp2 + self._x[1:] - self._x[:-1] - xm1
+    
+    edges = (1-t)*self._x[:-1] + t*self._x[1:]
+    edges = numpy.concatenate(([self._x[0]], edges, [self._x[-1]]), axis=0)
+    
+    # Mass simply requires scaling by the size of each triangle...
+    # (the half is dropped because we normalise directly - safer for numerical precision)
+    mass = numpy.pad(self._x[1:], (0, 1), 'edge')
+    mass -= numpy.pad(self._x[:-1], (1, 0), 'edge')
+    
+    mass *= self._y
+    mass /= mass.sum()
+    
+    # Return...
+    return edges, mass
+  
+  
   @staticmethod
   def _fetchx(orogram):
     if isinstance(orogram, RegOrogram):
