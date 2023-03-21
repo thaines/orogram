@@ -41,6 +41,21 @@ for i in model.binmodes():
 print(f'  highest = {model.highest()} (bin {model.binhighest()})')
 print()
 
+print('Above:')
+thresh = model(model.highest()) * 0.75
+print(f'  threshold = {thresh:.3f}')
+mass, ranges = model.above(thresh, True)
+print(f'  mass = {mass:.3f}')
+print('  ranges:')
+for start, end, mass in ranges:
+  print(f'    {start:.3f} — {end:.3f} = {mass:.3f}')
+print()
+
+print('Credible region (95%):')
+for start, end, mass in model.credible():
+  print(f'    {start:.3f} — {end:.3f} = {mass:.3f}')
+print()
+
 print('CDF:')
 print('  by x: {}'.format(', '.join([f'{v:.3f}' for v in model.cdf([4.25, 4.5, 5.0, 5.5, 5.75])])))
 print('  by bin: {}'.format(', '.join([f'{v:.3f}' for v in model.bincdf([len(model)//2 - 10, len(model)//2, len(model)//2 + 10])])))

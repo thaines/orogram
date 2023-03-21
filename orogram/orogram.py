@@ -14,6 +14,7 @@ except:
 
 from . import xentropy
 from . import simplify
+from . import credible
 
 from .regorogram import RegOrogram
 
@@ -375,6 +376,23 @@ class Orogram:
     var = (w * (v + numpy.square(m))).sum() - numpy.square(mean)
     
     return mean, var
+  
+  
+  def above(self, threshold, ranges = False):
+    """Returns the amount of probability mass found in the region where the pdf evaluates as above the given threshold. If you set parameter ranges=True then it returns a tuple of (total mass above threshold, list of ranges, each as (start, end, mass in range)). Primarily an internal method, used for finding credible regions, but might prove useful for someone."""
+    if ranges:
+      mass = credible.above(self._x, self._y, threshold)
+      r = credible.ranges(self._x, self._y, threshold)
+      return mass, r
+    
+    else:
+      return credible.above(self._x, self._y, threshold)
+  
+  
+  def credible(self, amount = 0.95, tolerance=1e-6):
+    """Calculates the credible interval of the distribution, in the sense of picking the ranges that add up to the given amount of probability mass while taking up the least amount of space. This means it selects the highest probability regions first. Returns a list of regions, where each region is represented by (start, end, mass). start to end is the actual range of the region, while mass is the total probability mass found within it."""
+    threshold = credible.credible(self._x, self._y, amount, tolerance)
+    return credible.ranges(self._x, self._y, threshold)
 
 
   def entropy(self):
