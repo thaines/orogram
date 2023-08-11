@@ -8,7 +8,7 @@
 import numpy
 cimport numpy
 
-from libc.math cimport log, fabs, INFINITY
+from libc.math cimport log, exp, fabs, INFINITY
 
 
 
@@ -78,13 +78,13 @@ cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double 
     return 0.0
   
   # Two ways of handling the second and third term — analytic version when stable, but when q0 and q1 are too close switch to the slower but more stable infinite series...
-  cdef float ret = 0
-  cdef float qdelta = q1 - q0
-  cdef float qsum
-  cdef double mult, qinner, incprod, delta
+  cdef double ret = 0
+  cdef double qdelta = q1 - q0
+  cdef double qsum
+  cdef double mult, log_qinner, delta
   cdef long n
   
-  if fabs(qdelta)>1e-2:
+  if fabs(qdelta)>1e-5:
     # Fast analytic version when stable...
     
     # Second term, partial division...
@@ -105,17 +105,17 @@ cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double 
     
       # Alternate third term...
       mult = (p1*q0*q0 - p0*q1*q1) / (qsum*qsum)
-      qinner = qdelta / qsum
-      incprod = qinner
-      qinner *= qinner
-    
+      if qdelta<0.0:
+        mult = -mult
+
+      log_qinner = log(max(fabs(qdelta), 1e-256) / qsum)
+
       for n in range(1, 64, 2):  
-        delta = mult * incprod / (n + 2)
+        delta = mult * exp(log_qinner*n) / (n + 2)
         ret += delta
       
         if fabs(delta)<1e-64:
           break
-        incprod *= qinner
   
   # The first term...
   ret -= 0.5 * (p0*log_q0 + p1*log_q1)
