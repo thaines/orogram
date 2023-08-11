@@ -28,8 +28,11 @@ model = orogram.Orogram(base_model)
 
 
 plt.figure(figsize=[6, 3])
+plt.xlabel(r'$x$')
+plt.ylabel(r'$P(x)$')
+
 plt.plot(*model.graph())
-plt.savefig(f'demo_standard_gaussian.pdf')
+plt.savefig('demo_standard_gaussian.pdf')
 
 
 print(f'  entropy:')
@@ -103,9 +106,22 @@ def generate(t):
 
 
 model_p = generate(0)
+
 plt.figure(figsize=[6, 3])
+plt.xlabel(r'$x$')
+plt.ylabel(r'$P(x)$')
+
 plt.plot(*model_p.graph())
-plt.savefig(f'demo_square_tri_example.pdf', bbox_inches='tight')
+
+plt.savefig('demo_square_tri_example.pdf', bbox_inches='tight')
+
+
+for t in [0.0,0.25,0.5,0.75,1.0]:
+  plt.figure(figsize=[4, 2])
+  plt.axis('off')
+  plt.title(f'$t={t}$', fontsize=32)
+  plt.plot(*generate(t).graph())
+  plt.savefig(f'demo_square_tri_{t}.pdf', bbox_inches='tight')
 
 
 ts = numpy.linspace(0.0, 1.0, 256+1)
