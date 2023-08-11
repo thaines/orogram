@@ -66,7 +66,7 @@ def generate(p0, p1, qmean, qmax, fn, steps = 1024+1):
 
   # Generate a graph...
   plt.figure(figsize=[6, 3])
-  plt.xlabel('q1 - q0')
+  plt.xlabel(r'$q_1 - q_0$')
   plt.ylabel('Segment cross entropy')
 
   plt.plot(q1 - q0, numint, linewidth=6, label='Numerical integration')

@@ -71,7 +71,7 @@ class Orogram:
       self._cdf = numpy.array(cdf, dtype=numpy.float32, copy=copy, order='A')
     
     else:
-      self._cdf = numpy.empty(x.shape, dtype=numpy.float32)
+      self._cdf = numpy.empty(self._x.shape, dtype=numpy.float32)
       self._cdf[0] = 0.0
       self._cdf[1:] = numpy.cumsum(mass)
       self._cdf[-1] = 1.0
@@ -196,7 +196,7 @@ class Orogram:
   @staticmethod
   def _fetchx(orogram):
     if isinstance(orogram, RegOrogram):
-      return ororam.center(numpy.arange(orogram._low-1, orogram._high+2))
+      return orogram.center(numpy.arange(orogram._low-1, orogram._high+2))
     
     else:
       return orogram._x
@@ -204,7 +204,7 @@ class Orogram:
   
   @staticmethod
   def mixture(orograms, weights):
-    """Returns a new Orogram that is constructed as a mixture of orograms - inputs are a list of Orogram objects and a corresponding list of weights, matching up with each Orogram. Will handle any RegOrogram objects that are included. Note that the return value can have as many bin centres as all inputs combined (duplicates are merged), so doing this iteratively without some kind of simplification step is in general unwise."""
+    """Returns a new Orogram that is constructed as a mixture of orograms - inputs are a list of Orogram objects and a corresponding list of weights (will be normalised), matching up with each Orogram. Will handle any RegOrogram objects that are included. Note that the return value can have as many bin centres as all inputs combined (duplicates are merged), so doing this iteratively without some kind of simplification step is in general unwise."""
 
     # Extract the list of bin centres...
     centers = numpy.concatenate([Orogram._fetchx(og) for og in orograms])
