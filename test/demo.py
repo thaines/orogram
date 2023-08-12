@@ -14,6 +14,7 @@ import orogram
 
 
 # Generates the numerical validation results used in the linear cross entropy paper.
+samples = 2**24
 
 
 
@@ -36,10 +37,12 @@ plt.savefig('demo_standard_gaussian.pdf')
 
 
 print(f'  entropy:')
-print(f'    true = {0.5*numpy.log(2*numpy.pi) + 0.5:.6f}')
-print(f'    analytic = {model.entropy():.6f}')
-print(f'    numerical integration = {model.entropynumint(samples=2**24):.6f}')
-print(f'    monte-carlo = {model.entropymc(samples=2**24):.6f}')
+print(f'    true = {0.5*numpy.log(2*numpy.pi) + 0.5:.7f}')
+print(f'    analytic = {model.entropy():.7f}')
+print(f'    numerical integration = {model.entropynumint(samples=samples):.7f}')
+print(f'    analytic = {model.entropy():.7f}')
+print(f'    analytic - numerical integration = {model.entropy()-model.entropynumint(samples=samples)}')
+print(f'    monte-carlo = {model.entropymc(samples=samples):.7f}')
 print()
 
 
@@ -70,8 +73,12 @@ if not os.path.exists('demo_gaussian_street.pdf'):
 
     kl[i] = model_p.crossentropy(model_q) - model_p.entropy()
     kl_true[i] = numpy.log(1.0/1.0) + (numpy.square(1.0) + numpy.square(mean_p[i] - mean_q[i]))/(2*numpy.square(1.0)) - 0.5
-    kl_ni[i] = model_p.crossentropynumint(model_q) - model_p.entropynumint()
+    kl_ni[i] = model_p.crossentropynumint(model_q, samples=samples) - model_p.entropynumint(samples=samples)
     kl_mc[i] = model_p.crossentropymc(model_q) - model_p.entropymc()
+
+
+  print(f'  max |analytic-true| = {numpy.fabs(kl-kl_true).max()}')
+  print(f'  max |analytic-numerical integration| = {numpy.fabs(kl-kl_ni).max()}')
 
 
   plt.figure(figsize=[6, 3])
@@ -134,9 +141,10 @@ for i in range(ts.shape[0]):
   model_q = generate(ts[i])
 
   xentropy[i] = model_p.crossentropy(model_q)
-  xentropy_ni[i] = model_p.crossentropynumint(model_q)
+  xentropy_ni[i] = model_p.crossentropynumint(model_q, samples=samples)
   xentropy_mc[i] = model_p.crossentropymc(model_q)
 
+print(f'  max |analytic-numerical integration| = {numpy.fabs(xentropy-xentropy_ni).max()}')
 
 plt.figure(figsize=[6, 3])
 plt.xlabel(r'$t$')
