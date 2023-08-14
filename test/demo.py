@@ -32,7 +32,7 @@ plt.figure(figsize=[6, 3])
 plt.xlabel(r'$x$')
 plt.ylabel(r'$P(x)$')
 
-plt.plot(*model.graph())
+plt.plot(*model.graph(), color='C2')
 plt.savefig('demo_standard_gaussian.pdf')
 
 
@@ -84,10 +84,10 @@ if not os.path.exists('demo_gaussian_street.pdf'):
   plt.xlabel(r'$\mu_Q - \mu_P$')
   plt.ylabel('KL-divergence')
 
-  plt.plot(mean_q - mean_p, kl_mc, linewidth=6, label='Monte-Carlo integration')
-  plt.plot(mean_q - mean_p, kl_ni, linewidth=4.5, label='Numerical integration')
-  plt.plot(mean_q - mean_p, kl_true, linewidth=3, label='True')
-  plt.plot(mean_q - mean_p, kl, linewidth=1.5, label='Analytic')
+  plt.plot(mean_q - mean_p, kl_mc, linewidth=7.5, label='Monte-Carlo integration', color='lightgray')
+  plt.plot(mean_q - mean_p, kl_ni, linewidth=4.5, label='Numerical integration', color='C0')
+  plt.plot(mean_q - mean_p, kl_true, linewidth=3, label='True', color='hotpink')
+  plt.plot(mean_q - mean_p, kl, linewidth=1.5, label='Analytic', color='yellow')
 
   plt.legend()
   plt.savefig('demo_gaussian_street.pdf', bbox_inches='tight')
@@ -117,7 +117,7 @@ plt.figure(figsize=[6, 3])
 plt.xlabel(r'$x$')
 plt.ylabel(r'$P(x)$')
 
-plt.plot(*model_p.graph())
+plt.plot(*model_p.graph(), color='C2')
 
 plt.savefig('demo_square_tri_example.pdf', bbox_inches='tight')
 
@@ -126,7 +126,7 @@ for t in [0.0,0.25,0.5,0.75,1.0]:
   plt.figure(figsize=[4, 2])
   plt.axis('off')
   plt.title(f'$t={t}$', fontsize=32)
-  plt.plot(*generate(t).graph())
+  plt.plot(*generate(t).graph(), color='C2')
   plt.savefig(f'demo_square_tri_{t}.pdf', bbox_inches='tight')
 
 
@@ -149,9 +149,9 @@ plt.figure(figsize=[6, 3])
 plt.xlabel(r'$t$')
 plt.ylabel('Cross entropy')
 
-plt.plot(ts, xentropy_mc, linewidth=4.5, label='Monte-Carlo integration')
-plt.plot(ts, xentropy_ni, linewidth=3, label='Numerical integration')
-plt.plot(ts, xentropy, linewidth=1.5, label='Analytic')
+plt.plot(ts, xentropy_mc, linewidth=7.5, label='Monte-Carlo integration', color='lightgray')
+plt.plot(ts, xentropy_ni, linewidth=4.5, label='Numerical integration', color='C0')
+plt.plot(ts, xentropy, linewidth=1.5, label='Analytic', color='yellow')
 
 plt.legend()
 plt.savefig('demo_square_tri_sweep.pdf', bbox_inches='tight')

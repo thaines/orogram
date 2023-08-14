@@ -69,9 +69,10 @@ def generate(p0, p1, qmean, qmax, fn, steps = 1024+1):
   plt.xlabel(r'$q_1 - q_0$')
   plt.ylabel('Segment cross entropy')
 
-  plt.plot(q1 - q0, numint, linewidth=6, label='Numerical integration')
-  plt.plot(q1 - q0, stable, linewidth=3, label='Stable')
-  plt.plot(q1 - q0, unstable, linewidth=1.5, label='Fast')
+  plt.plot(q1 - q0, numint, linewidth=4.5, label='Numerical integration', color='C0')
+  plt.plot(q1 - q0, unstable, linewidth=1.5, label='Fast', color='k')
+  plt.plot(q1 - q0, stable, linewidth=0.75, label='Stable', color='lightgreen')
+
 
   plt.legend()
   plt.savefig(fn, bbox_inches='tight')
