@@ -406,13 +406,16 @@ class Orogram:
     # Evaluate across range of distribution...
     x = numpy.linspace(self._x[0], self._x[-1], samples)
     y = self(x)
-    delta = x[1] - x[0]
     
-    # Filter out the zeros - log gets very unhappy about them...
-    y = y[y>=threshold]
-    
-    # Entropy!..
-    return -delta * (y * numpy.log(y)).sum()
+    # Safe log...
+    log_y = numpy.log(numpy.maximum(y, 1e-32))
+
+    # Average height...
+    heights = y * log_y
+    height = 0.5 * xentropy.mean(heights[1:] + heights[:-1])
+
+    # Scale by width and return...
+    return -height * (x[-1] - x[0])
   
   
   def entropymc(self, samples=1024*1024, threshold=1e-12, rng=None):
@@ -437,18 +440,16 @@ class Orogram:
     # Evaluate p across range of self distribution...
     x = numpy.linspace(self._x[0], self._x[-1], samples)
     p = self(x)
-    delta = x[1] - x[0]
     
-    # Filter out the zeros - log gets very unhappy about them...
-    good = p>=threshold
-    x = x[good]
-    p = p[good]
-    
-    # Evaluate log(q)... 
-    qlog = numpy.log(numpy.maximum(q(x), 1e-32))
-    
-    # Cross entropy!..
-    return -delta * (p * qlog).sum()
+    # Safe log...
+    log_q = numpy.log(numpy.maximum(q(x), 1e-32))
+
+    # Average height...
+    heights = p * log_q
+    height = 0.5 * xentropy.mean(heights[1:] + heights[:-1])
+
+    # Scale by width and return...
+    return -height * (x[-1] - x[0])
 
 
   def crossentropymc(self, q, samples=1024*1024, threshold=1e-12, rng=None):

@@ -422,3 +422,46 @@ cpdef float irregular_crossentropy(float[:] p_x, float[:] p_y, float[:] q_x, flo
   
   # Return total...
   return ret
+
+
+
+cpdef double mean(double[:] vals) nogil:
+  """Calculates and returns the mean in a way that is reasonably safe to underflow. Used by the numerical integration versions, to maximise fairness."""
+  cdef double bsize = 256.0
+  cdef double ret0 = 0.0, ret1 = 0.0, ret2 = 0.0
+  cdef double weight0 = 0.0, weight1 = 0.0, weight2 = 0.0
+
+  # Loop and add in everything...
+  cdef long i
+  for i in range(vals.shape[0]):
+    ret2 += vals[i]
+    weight2 += 1.0
+
+    if weight2>=bsize:
+      ret1 += ret2 / bsize
+      weight1 += weight2 / bsize
+
+      ret2 = 0.0
+      weight2 = 0.0
+
+      if weight1>=bsize:
+        ret0 += ret1 / bsize
+        weight0 += weight1 / bsize
+
+        ret1 = 0.0
+        weight1 = 0.0
+
+  # Handle the tail...
+  if weight2>0.0:
+    ret1 += ret2 / bsize
+    weight1 += weight2 / bsize
+
+  if weight1>0.0:
+    ret0 += ret1 / bsize
+    weight0 += weight1 / bsize
+
+  # Return...
+  if weight0>0.0:
+    return ret0 / weight0
+  else:
+    return 0.0
