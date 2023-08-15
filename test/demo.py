@@ -33,7 +33,7 @@ plt.xlabel(r'$x$')
 plt.ylabel(r'$P(x)$')
 
 plt.plot(*model.graph(), color='C2')
-plt.savefig('demo_standard_gaussian.pdf')
+plt.savefig('demo_standard_gaussian.pdf', bbox_inches='tight')
 
 
 print(f'  entropy:')
