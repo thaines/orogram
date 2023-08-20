@@ -26,7 +26,7 @@ cdef packed struct Triangle:
   float prob # Probability at b
 
 
-cdef int tricmp(const void * lhs, const void * rhs) nogil:
+cdef int tricmp(const void * lhs, const void * rhs) noexcept nogil:
   cdef float cost_lhs = (<Triangle*>lhs).cost
   cdef float cost_rhs = (<Triangle*>rhs).cost
   
