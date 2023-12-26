@@ -147,7 +147,7 @@ plt.savefig(f'quad_mixture.pdf', bbox_inches='tight')
 
 # Generate a bank of randomised mixture parameters...
 rng = numpy.random.default_rng(0)
-params = numpy.empty((32, 12))
+params = numpy.empty((256, 12))
 
 params[:,0:4] = rng.dirichlet(numpy.ones(4), params.shape[0])
 params[:,4:8] = rng.uniform(-2.5, 2.5, (params.shape[0], 4))
@@ -156,7 +156,7 @@ params[:,8:12] = rng.uniform(0.1, 1.0, (params.shape[0], 4))
 
 
 # Array of sample counts, plus how far into the array to plot...
-samples = numpy.geomspace(3, 2**24, 16)
+samples = numpy.geomspace(3, 2**24, 64)
 samples = numpy.unique(samples.astype(int))
 show = numpy.searchsorted(samples, 10000)
 
@@ -191,7 +191,7 @@ percentiles = numpy.array([50, 75, 95])
 err_ni = numpy.fabs(entropy_ni - entropy_ni[:,-1,None])
 pcent_ni = numpy.percentile(err_ni, percentiles, axis=0)
 
-err = numpy.fabs(entropy - entropy[:,-1,None])
+err = numpy.fabs(entropy - entropy_ni[:,-1,None])
 pcent = numpy.percentile(err, percentiles, axis=0)
 
 
@@ -207,9 +207,9 @@ plt.plot(samples[:show], pcent_ni[0,:show], 'C0-', label=r'numerical integration
 plt.plot(samples[:show], pcent_ni[1,:show], 'C0--', label=r'numerical integration $75^\textrm{th}$ percentile')
 plt.plot(samples[:show], pcent_ni[2,:show], 'C0:', label=r'numerical integration $95^\textrm{th}$ percentile')
 
-plt.plot(samples[:show], pcent[0,:show], 'C2-', label=r'analytic $50^\textrm{th}$ percentile')
-plt.plot(samples[:show], pcent[1,:show], 'C2--', label=r'analytic $75^\textrm{th}$ percentile')
-plt.plot(samples[:show], pcent[2,:show], 'C2:', label=r'analytic $95^\textrm{th}$ percentile')
+plt.plot(samples[:show], pcent[0,:show], 'C1-', label=r'analytic $50^\textrm{th}$ percentile')
+plt.plot(samples[:show], pcent[1,:show], 'C1--', label=r'analytic $75^\textrm{th}$ percentile')
+plt.plot(samples[:show], pcent[2,:show], 'C1:', label=r'analytic $95^\textrm{th}$ percentile')
 
 plt.legend()
 plt.savefig(f'quad_convergence.pdf', bbox_inches='tight')
