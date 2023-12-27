@@ -62,8 +62,8 @@ param = numpy.array([0.25, 0.25, 0.25, 0.25,
                      -2.25, -0.75, 0.75, 2.25,
                      0.6, 0.6, 0.6, 0.6])
 
-sep_pdf = lambda x: pdf(x, param)
-sep_cdf = lambda x: cdf(x, param)
+sep_pdf = lambda x: mix4_pdf(x, param)
+sep_cdf = lambda x: mix4_cdf(x, param)
 
 x = numpy.linspace(low, high, 2048)
 y = sep_pdf(x)
@@ -78,19 +78,14 @@ plt.xlabel(r'$x$')
 plt.ylabel(r'$P(x)$')
 
 plt.plot(x, y)
-plt.plot(*model.graph())
+#plt.plot(*model.graph())
 #plt.plot(x, yc, ':')
 plt.savefig(f'quad_mixture.pdf', bbox_inches='tight')
 
 
 
 # Generate a bank of randomised mixture parameters...
-rng = numpy.random.default_rng(0)
-params = numpy.empty((args.dists, 12))
-
-params[:,0:4] = rng.dirichlet(numpy.ones(4), params.shape[0])
-params[:,4:8] = rng.uniform(-2.5, 2.5, (params.shape[0], 4))
-params[:,8:12] = rng.uniform(0.1, 1.0, (params.shape[0], 4))
+params = mix4_params(args.dists, 0)
 
 
 
@@ -109,7 +104,7 @@ entropy = numpy.empty((params.shape[0], samples.shape[0]))
 for pi in range(params.shape[0]):
   print(f'\r{pi} of {params.shape[0]}', end='')
   # Create cdf function with current parameters...
-  pcdf = lambda x: cdf(x, params[pi,:])
+  pcdf = lambda x: mix4_cdf(x, params[pi,:])
 
   for si in range(samples.shape[0]):
     # Create orogram object with correct sample count from cdf...

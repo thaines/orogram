@@ -64,6 +64,32 @@ def laplace_cdf(x, mean, scale):
 
 
 
+# Setup a parameterised mixture models, with one each of the above distribtions, represented with vectorised pdf and cdf functions with a parameter vector...
+## Parameter vector is:
+## [4xmixture weight, 4xcenters, 4xscales] = length 12
+## Mixture components in order of above functions
+def mix4_pdf(x, param):
+  return param[0]*uniform_pdf(x, param[4], param[8]) + param[1]*triangular_pdf(x, param[5], param[9]) + param[2]*gaussian_pdf(x, param[6], param[10]) + param[3]*laplace_pdf(x, param[7], param[11])
+
+
+def mix4_cdf(x, param):
+  return param[0]*uniform_cdf(x, param[4], param[8]) + param[1]*triangular_cdf(x, param[5], param[9]) + param[2]*gaussian_cdf(x, param[6], param[10]) + param[3]*laplace_cdf(x, param[7], param[11])
+
+
+
+def mix4_params(count, rng = None):
+  """Generates an array of parameters for the mix4 distribution; as a 2D array where each row is the parameters for a single randomised model. The first parameter is the number of rows, i.e. how many models to generate. Second a numpy rng, which supports everything that can be passed to default_rng(). Designed to work well if considering the range from -4 to 4."""
+  rng = numpy.random.default_rng(rng)
+  ret = numpy.empty((count, 12))
+
+  ret[:,0:4] = rng.dirichlet(numpy.ones(4), count)
+  ret[:,4:8] = rng.uniform(-2.5, 2.5, (count, 4))
+  ret[:,8:12] = rng.uniform(0.1, 1.0, (count, 4))
+
+  return ret
+
+
+
 if __name__=='__main__':
   import os, sys
   import functools
