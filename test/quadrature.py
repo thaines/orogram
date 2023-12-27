@@ -4,6 +4,8 @@
 import sys, os
 import functools
 
+import argparse
+
 import numpy
 import scipy
 
@@ -14,6 +16,25 @@ from dists import *
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import orogram
+
+
+
+# Command line arguments...
+parser = argparse.ArgumentParser(description='Compares quadrature for calculating entropy between piecewise linear analytic and numerical integration.')
+
+parser.add_argument('-q', '--quick', action='store_true', help='Changes the default arguments for a fast set.')
+
+parser.add_argument('-l', '--limit', default=1000, help='How high to go in samples for the graph it outputs.')
+parser.add_argument('-d', '--dists', help='How many randomised mixture model to average the error over. Defaults to 1024, unless quick in which case it defaults to 32.')
+parser.add_argument('-s', '--steps', help='How many steps to have on the x axis of the graph; defaults to 64 unless quick, in which case it drops down to 8.')
+
+args = parser.parse_args()
+
+if args.dists is None:
+  args.dists = 32 if args.quick else 1024
+
+if args.steps is None:
+  args.steps = 8 if args.quick else 64
 
 
 
@@ -65,7 +86,7 @@ plt.savefig(f'quad_mixture.pdf', bbox_inches='tight')
 
 # Generate a bank of randomised mixture parameters...
 rng = numpy.random.default_rng(0)
-params = numpy.empty((256, 12))
+params = numpy.empty((args.dists, 12))
 
 params[:,0:4] = rng.dirichlet(numpy.ones(4), params.shape[0])
 params[:,4:8] = rng.uniform(-2.5, 2.5, (params.shape[0], 4))
@@ -74,9 +95,10 @@ params[:,8:12] = rng.uniform(0.1, 1.0, (params.shape[0], 4))
 
 
 # Array of sample counts, plus how far into the array to plot...
-samples = numpy.geomspace(3, 2**24, 64)
+samples = numpy.geomspace(3, args.limit, args.steps)
+samples = numpy.append(samples, [2**24])
 samples = numpy.unique(samples.astype(int))
-show = numpy.searchsorted(samples, 10000)
+show = numpy.searchsorted(samples, args.limit)
 
 
 
