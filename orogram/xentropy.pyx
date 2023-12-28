@@ -44,7 +44,7 @@ cpdef float reg_entropy(float[:] prob, float spacing):
 cpdef float irr_entropy(float[:] x, float[:] prob):
   """Calculates entropy of an irregular orogram using the analytic equations I've derived."""
   cdef int i
-  cdef float ret = 0.0
+  cdef double ret = 0.0
   cdef double plogp_last, plogp
   cdef float xdelta, pdelta
 

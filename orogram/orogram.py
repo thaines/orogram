@@ -404,7 +404,8 @@ class Orogram:
     """Numerical integration version of entropy(); for testing only as obviously much slower. In nats."""
     
     # Evaluate across range of distribution...
-    x = numpy.linspace(self._x[0], self._x[-1], samples)
+    x = numpy.linspace(self._x[0], self._x[-1], samples+1)
+    x = 0.5*(x[:-1] + x[1:])
     y = self(x)
     
     # Safe log...
@@ -412,7 +413,7 @@ class Orogram:
 
     # Average height...
     heights = y * log_y
-    height = 0.5 * xentropy.mean(heights[1:] + heights[:-1])
+    height = xentropy.mean(heights)
 
     # Scale by width and return...
     return -height * (x[-1] - x[0])
