@@ -45,18 +45,6 @@ high = 4
 
 
 
-# Setup a parameterised mixture models, represented with vectorised pdf and cdf functions with a parameter vector...
-## Parameter vector is:
-## [4xmixture weight, 4xcenters, 4xscales] = length 12
-## Mixture components in order of above functions
-def pdf(x, param):
-  return param[0]*uniform_pdf(x, param[4], param[8]) + param[1]*triangular_pdf(x, param[5], param[9]) + param[2]*gaussian_pdf(x, param[6], param[10]) + param[3]*laplace_pdf(x, param[7], param[11])
-
-def cdf(x, param):
-  return param[0]*uniform_cdf(x, param[4], param[8]) + param[1]*triangular_cdf(x, param[5], param[9]) + param[2]*gaussian_cdf(x, param[6], param[10]) + param[3]*laplace_cdf(x, param[7], param[11])
-
-
-
 # Visualise the pdf for one where they are clearly seperated...
 param = numpy.array([0.25, 0.25, 0.25, 0.25,
                      -2.25, -0.75, 0.75, 2.25,
