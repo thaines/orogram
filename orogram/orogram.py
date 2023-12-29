@@ -55,8 +55,11 @@ class Orogram:
     
     if norm:
       total = mass.sum()
+      if total < 1e-12:
+        raise ZeroDivisionError('No mass in Orogram')
+
       self._y /= total
-      
+
       if cdf is None:
         mass /= total
     
@@ -64,7 +67,7 @@ class Orogram:
     assert(len(self._x.shape)==1)
     assert(len(self._y.shape)==1)
     assert(self._x.shape[0]==self._y.shape[0])
-    assert(numpy.all(numpy.diff(self._x) > 0.0))
+    assert(numpy.all(numpy.diff(self._x) >= 0.0))
     
     # Fill in the CDF array...
     if cdf is not None:
