@@ -15,7 +15,7 @@ from libc.math cimport log, exp, fabs, INFINITY
 cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1) nogil:
   """Solves integral for a linear section as needed to calculate cross entropy. Internals carefully ordered to maximise numerical stability, but really don't think that's required - just being paranoid."""
   # Early exit if it's zero...
-  if p0<1e-12 and p1<1e-12:
+  if p0<1e-64 and p1<1e-64:
     return 0.0
 
   # Two ways of handling the second and third term — analytic version when stable, but when q0 and q1 are too close switch to the slower but more stable infinite series...
@@ -41,7 +41,7 @@ cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double 
     # Slow version with infinite series when analytic would be unstable...
     # Alternate second term...
     qsum = q0 + q1
-    if qsum > 1e-12:
+    if qsum > 1e-64:
       ret += 0.25 * (p1 - p0) * qdelta / qsum
 
       # Alternate third term...
