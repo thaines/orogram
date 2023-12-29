@@ -229,7 +229,7 @@ class Orogram:
   
   @staticmethod
   def product(orograms):
-    """Returns a new Orogram that is constructed as a product of ororams - input is a list of Orogram objects; it is renormalised. It can raise a ZeroDivisionError exception if the intersection of probability mass is null. Will handle any RegOrogram objects that are included. Note that the return value can have as many bin centres as all inputs combined (duplicates are merged), so doing this iteratively without some kind of simplification step is in general unwise."""
+    """Returns a new Orogram that is constructed as a product of orograms - input is a list of Orogram objects; it is renormalised. It can raise a ZeroDivisionError exception if the intersection of probability mass is null. Will handle any RegOrogram objects that are included. Note that the return value can have as many bin centres as all inputs combined (duplicates are merged), so doing this iteratively without some kind of simplification step is in general unwise."""
     
     # Extract the list of bin centres...
     centers = numpy.concatenate([Orogram._fetchx(og) for og in orograms])
@@ -250,6 +250,25 @@ class Orogram:
     # Construct and return object...
     return Orogram(centers, values, copy=False)
   
+
+  def clip(self, low, high):
+    """Returns a new Orogram clipped between the two given x values. Inclusive and renormalises."""
+
+    low_y = numpy.interp(low, self._x, self._y, 0.0, 0.0)
+    low_bin = numpy.searchsorted(self._x, low, 'left')
+    high_y = numpy.interp(high, self._x, self._y, 0.0, 0.0)
+    high_bin = numpy.searchsorted(self._x, high, 'right')
+
+    new_x = numpy.concatenate(([low], self._x[low_bin:high_bin], [high]))
+    new_y = numpy.concatenate(([low_y], self._y[low_bin:high_bin], [high_y]))
+
+    return Orogram(new_x, new_y)
+
+
+  def binclip(self, low, high):
+    """Same as clip, but you give it bin indices instead. Inclusive and renormalises."""
+    return Orogram(self._x[low:high+1], self._y[low:high+1])
+
 
   def cdf(self, x):
     """Evaluates the cdf at the given x. Vectorised."""
