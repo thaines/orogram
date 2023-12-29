@@ -48,7 +48,7 @@ high = 4
 # Visualise the pdf for one where they are clearly seperated...
 param = numpy.array([0.25, 0.25, 0.25, 0.25,
                      -2.25, -0.75, 0.75, 2.25,
-                     0.6, 0.6, 0.6, 0.6])
+                     0.6, 0.6, 0.3, 0.4])
 
 sep_pdf = lambda x: mix4_pdf(x, param)
 sep_cdf = lambda x: mix4_cdf(x, param)
@@ -134,5 +134,5 @@ plt.plot(samples[:show], pcent[0,:show], 'C1-', label=r'$50^\textrm{th}$ percent
 plt.plot(samples[:show], pcent[1,:show], 'C1--', label=r'$75^\textrm{th}$ percentile of analytic')
 plt.plot(samples[:show], pcent[2,:show], 'C1:', label=r'$95^\textrm{th}$ percentile of analytic')
 
-plt.legend()
+plt.legend(loc='upper right')
 plt.savefig(f'quad_convergence.pdf', bbox_inches='tight')
