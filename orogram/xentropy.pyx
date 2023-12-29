@@ -12,97 +12,38 @@ from libc.math cimport log, exp, fabs, INFINITY
 
 
 
-cpdef float reg_entropy(float[:] prob, float spacing):
-  """Calculates entropy of a regular orogram using the analytic equations I've derived."""
-  cdef int i
-  cdef float ret = 0.0
-  cdef double plogp_last, plogp
-  cdef float pdelta
-  
-  plogp_last = prob[0] * log(prob[0]) if prob[0]>1e-12 else 0.0
-  
-  for i in range(1, prob.shape[0]):
-    
-    # Calculate the p*log(p) term for the current value...
-    plogp = prob[i] * log(prob[i]) if prob[i]>1e-12 else 0.0
-    
-    # Do the safe bit...
-    ret -= 0.5 * spacing * (plogp_last + plogp)
-    
-    # Do the bit that might be unstable if the delta is too small...
-    pdelta = prob[i] - prob[i-1]
-    if fabs(pdelta)>1e-12:
-      ret -= 0.25 * spacing * (prob[i-1]*prob[i-1] - prob[i]*prob[i] + 2 * (prob[i-1]*plogp - prob[i]*plogp_last)) / pdelta
-    
-    # Move to next...
-    plogp_last = plogp
-  
-  return ret
-
-
-
-cpdef float irr_entropy(float[:] x, float[:] prob):
-  """Calculates entropy of an irregular orogram using the analytic equations I've derived."""
-  cdef int i
-  cdef double ret = 0.0
-  cdef double plogp_last, plogp
-  cdef float xdelta, pdelta
-
-  plogp_last = prob[0] * log(prob[0]) if prob[0]>1e-12 else 0.0
-  
-  for i in range(1, prob.shape[0]):
-    
-    # Calculate the p*log(p) term for the current value...
-    plogp = prob[i] * log(prob[i]) if prob[i]>1e-12 else 0.0
-    
-    # Do the safe bit...
-    xdelta = x[i] - x[i-1]
-    ret -= 0.5 * xdelta * (plogp_last + plogp)
-    
-    # Do the bit that might be unstable if the delta is too small...
-    pdelta = prob[i] - prob[i-1]
-    if fabs(pdelta)>1e-12:
-      ret -= 0.25 * xdelta * (prob[i-1]*prob[i-1] - prob[i]*prob[i] + 2 * (prob[i-1]*plogp - prob[i]*plogp_last)) / pdelta
-    
-    # Move to next...
-    plogp_last = plogp
-  
-  return ret
-
-
-
 cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1) nogil:
   """Solves integral for a linear section as needed to calculate cross entropy. Internals carefully ordered to maximise numerical stability, but really don't think that's required - just being paranoid."""
   # Early exit if it's zero...
   if p0<1e-12 and p1<1e-12:
     return 0.0
-  
+
   # Two ways of handling the second and third term — analytic version when stable, but when q0 and q1 are too close switch to the slower but more stable infinite series...
   cdef double ret = 0
   cdef double qdelta = q1 - q0
   cdef double qsum
   cdef double mult, log_qinner, delta
   cdef long n
-  
+
   if fabs(qdelta)>1e-5:
     # Fast analytic version when stable...
-    
+
     # Second term, partial division...
     ret = ((p1*q0*q0 - p0*q1*q1) * (log_q1 - log_q0)) / qdelta
-    
+
     # Third term without division...
     ret += 0.5 * ((3*p0 + p1)*q1 - (p0 + 3*p1)*q0)
-    
+
     # Remaining division required to get both terms correct...
     ret /= 2 * qdelta
-  
+
   else:
     # Slow version with infinite series when analytic would be unstable...
     # Alternate second term...
     qsum = q0 + q1
     if qsum > 1e-12:
       ret += 0.25 * (p1 - p0) * qdelta / qsum
-    
+
       # Alternate third term...
       mult = (p1*q0*q0 - p0*q1*q1) / (qsum*qsum)
       if qdelta<0.0:
@@ -110,17 +51,61 @@ cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double 
 
       log_qinner = log(max(fabs(qdelta), 1e-256) / qsum)
 
-      for n in range(1, 64, 2):  
+      for n in range(1, 64, 2):
         delta = mult * exp(log_qinner*n) / (n + 2)
         ret += delta
-      
+
         if fabs(delta)<1e-64:
           break
-  
+
   # The first term...
   ret -= 0.5 * (p0*log_q0 + p1*log_q1)
-  
+
   # Return...
+  return ret
+
+
+
+cpdef float reg_entropy(float[:] prob, float spacing) nogil:
+  """Calculates entropy of a regular orogram using the analytic equations I've derived."""
+  cdef int i
+  cdef float ret = 0.0
+  cdef double logp_last, logp
+
+  logp_last = log(prob[0]) if prob[0]>=1e-64 else -150
+  
+  for i in range(1, prob.shape[0]):
+    # Safely calculate logp...
+    logp = log(prob[i]) if prob[i]>=1e-64 else -150
+
+    # Sum in segment (could be more efficient, as below function call is generic)...
+    ret += spacing * section_crossentropy(prob[i-1], prob[i], prob[i-1], prob[i], logp_last, logp)
+    
+    # Move to next...
+    logp_last = logp
+  
+  return ret
+
+
+
+cpdef float irr_entropy(float[:] x, float[:] prob) nogil:
+  """Calculates entropy of an irregular orogram using the analytic equations I've derived."""
+  cdef int i
+  cdef float ret = 0.0
+  cdef double logp_last, logp
+  
+  logp_last = log(prob[0]) if prob[0]>=1e-64 else -150
+
+  for i in range(1, prob.shape[0]):
+    # Safely calculate logp...
+    logp = log(prob[i]) if prob[i]>=1e-64 else -150
+
+    # Sum in segment (could be more efficient, as below function call is generic)...
+    ret += (x[i] - x[i-1]) * section_crossentropy(prob[i-1], prob[i], prob[i-1], prob[i], logp_last, logp)
+
+    # Move to next...
+    logp_last = logp
+  
   return ret
 
 
