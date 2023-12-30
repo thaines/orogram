@@ -422,26 +422,27 @@ class Orogram:
     return xentropy.irr_entropy(self._x, self._y)
   
   
-  def entropynumint(self, samples=1024*1024, threshold=1e-12):
+  def entropynumint(self, samples=1024*1024):
     """Numerical integration version of entropy(); for testing only as obviously much slower. In nats."""
     
     # Evaluate across range of distribution...
-    x = numpy.linspace(self._x[0], self._x[-1], samples+1)
-    x = 0.5*(x[:-1] + x[1:])
+    x = numpy.linspace(self._x[0], self._x[-1], samples)
     y = self(x)
     
     # Safe log...
-    log_y = numpy.log(numpy.maximum(y, 1e-32))
+    log_y = numpy.log(numpy.maximum(y, 1e-64))
 
-    # Average height...
+    # Average height, with tweaking end bins to half weight...
     heights = y * log_y
-    height = xentropy.mean(heights)
+    heights[0] += heights[-1]
+    heights[0] *= 0.5
+    height = xentropy.mean(heights[:-1])
 
     # Scale by width and return...
     return -height * (x[-1] - x[0])
   
   
-  def entropymc(self, samples=1024*1024, threshold=1e-12, rng=None):
+  def entropymc(self, samples=1024*1024, rng=None):
     """Monte-Carlo integration version of entropy. Super slow of course so just for testing as it also doubles as a good sanity check of sampling. In nats."""
     
     # Draw and evaluate...
@@ -449,7 +450,7 @@ class Orogram:
     y = self(x)
     
     # Entropy!..
-    return -numpy.log(numpy.maximum(y, 1e-12)).mean()
+    return -numpy.log(numpy.maximum(y, 1e-64)).mean()
 
 
   def crossentropy(self, q):
@@ -457,7 +458,7 @@ class Orogram:
     return xentropy.irregular_crossentropy(self._x, self._y, q._x, q._y)
 
 
-  def crossentropynumint(self, q, samples=1024*1024, threshold=1e-12):
+  def crossentropynumint(self, q, samples=1024*1024):
     """Calculates the cross entropy, H(p=self, q=first parameter), outputting nats. If you're measuring the inefficiency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses numerical integration and exists for testing only - slow."""
     
     # Evaluate p across range of self distribution...
@@ -465,17 +466,19 @@ class Orogram:
     p = self(x)
     
     # Safe log...
-    log_q = numpy.log(numpy.maximum(q(x), 1e-32))
+    log_q = numpy.log(numpy.maximum(q(x), 1e-64))
 
-    # Average height...
+    # Average height, with tweaking end bins to half weight...
     heights = p * log_q
-    height = 0.5 * xentropy.mean(heights[1:] + heights[:-1])
+    heights[0] += heights[-1]
+    heights[0] *= 0.5
+    height = xentropy.mean(heights[:-1])
 
     # Scale by width and return...
     return -height * (x[-1] - x[0])
 
 
-  def crossentropymc(self, q, samples=1024*1024, threshold=1e-12, rng=None):
+  def crossentropymc(self, q, samples=1024*1024, rng=None):
     """Calculates the cross entropy, H(p=self, q=first parameter), outputting nats. If you're measuring the inefficiency of an encoding then p/self is the true distribution and q/first parameter the distribution used for encoding. This version uses Monte-Carlo integration and exists for testing only - super slow."""
     
     # Draw and evaluate...
@@ -483,7 +486,7 @@ class Orogram:
     y = q(x)
     
     # Calculate cross-entropy...
-    return -numpy.log(numpy.maximum(y, 1e-32)).mean()
+    return -numpy.log(numpy.maximum(y, 1e-64)).mean()
   
   
   def kl(self, q):
