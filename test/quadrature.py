@@ -105,6 +105,7 @@ for pi in range(params.shape[0]):
     entropy[pi, si] = model.entropy()
 
 print(f'\r{params.shape[0]} of {params.shape[0]}')
+print()
 
 
 
@@ -116,6 +117,14 @@ pcent_ni = numpy.percentile(err_ni, percentiles, axis=0)
 
 err = numpy.fabs(entropy - entropy_ni[:,-1,None])
 pcent = numpy.percentile(err, percentiles, axis=0)
+
+
+
+# Report difference between highest sample count of both numerical integration and analytic, as a sanity check...
+zero_maybe = numpy.fabs(entropy[:,-1] - entropy_ni[:,-1])
+print(f'mean converged delta = {zero_maybe.mean()}')
+print(f'maximum converged delta = {zero_maybe.max()}')
+print()
 
 
 
