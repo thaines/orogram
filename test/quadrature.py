@@ -79,7 +79,7 @@ params = mix4_params(args.dists, 0)
 
 # Array of sample counts, plus how far into the array to plot...
 samples = numpy.geomspace(3, args.limit, args.steps)
-samples = numpy.append(samples, [2**24])
+samples = numpy.append(samples, [2**16 if args.quick else 2**24])
 samples = numpy.unique(samples.astype(int))
 show = numpy.searchsorted(samples, args.limit)
 
