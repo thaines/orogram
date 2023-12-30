@@ -49,7 +49,7 @@ cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double 
       if qdelta<0.0:
         mult = -mult
 
-      log_qinner = log(max(fabs(qdelta), 1e-256) / qsum)
+      log_qinner = log(max(fabs(qdelta / qsum), 1e-64))
 
       for n in range(1, 64, 2):
         delta = mult * exp(log_qinner*n) / (n + 2)
