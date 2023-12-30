@@ -12,7 +12,7 @@ from libc.math cimport log, exp, fabs, INFINITY
 
 
 
-cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1) nogil:
+cpdef double section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1) nogil:
   """Solves integral for a linear section as needed to calculate cross entropy. Internals carefully ordered to maximise numerical stability, but really don't think that's required - just being paranoid."""
   # Early exit if it's zero...
   if p0<1e-64 and p1<1e-64:
@@ -69,7 +69,7 @@ cpdef float section_crossentropy(float p0, float p1, float q0, float q1, double 
 cpdef float reg_entropy(float[:] prob, float spacing) nogil:
   """Calculates entropy of a regular orogram using the analytic equations I've derived."""
   cdef int i
-  cdef float ret = 0.0
+  cdef double ret = 0.0
   cdef double logp_last, logp
 
   logp_last = log(prob[0]) if prob[0]>=1e-64 else -150
@@ -91,7 +91,7 @@ cpdef float reg_entropy(float[:] prob, float spacing) nogil:
 cpdef float irr_entropy(float[:] x, float[:] prob) nogil:
   """Calculates entropy of an irregular orogram using the analytic equations I've derived."""
   cdef int i
-  cdef float ret = 0.0
+  cdef double ret = 0.0
   cdef double logp_last, logp
   
   logp_last = log(prob[0]) if prob[0]>=1e-64 else -150
@@ -117,7 +117,7 @@ cpdef float aligned_crossentropy(long blocksize, float spacing, int p_start, int
   cdef float p_prev = 0.0, p_curr
   cdef float q_prev = 0.0, q_curr
   cdef double log_q_prev = -150, log_q_curr # -150 ~= log(1e-64)
-  cdef float ret = 0.0
+  cdef double ret = 0.0
   
   # Block indices and pointers...
   cdef long blockindex = i // blocksize
@@ -183,7 +183,7 @@ cpdef float aligned_crossentropy(long blocksize, float spacing, int p_start, int
 
 cpdef float misaligned_crossentropy(int p_start, int p_end, p_dic, q_dic, float p_norm, float q_norm, long p_blocksize, long q_blocksize, float p_spacing, float q_spacing):
   """Calculates the cross entropy (nats) between two regularly spaced orograms where the bins are not aligned."""
-  cdef float ret = 0.0
+  cdef double ret = 0.0
   
   # Setup coordinates, right at the start...
   cdef long pi = p_start
@@ -293,7 +293,7 @@ cpdef float misaligned_crossentropy(int p_start, int p_end, p_dic, q_dic, float 
 
 cpdef float irregular_crossentropy(float[:] p_x, float[:] p_y, float[:] q_x, float[:] q_y) nogil:
   """Calculates the cross entropy (nats) between two irregularly spaced orograms."""
-  cdef float ret = 0.0
+  cdef double ret = 0.0
   
   # Position in sequence state (includes binary search for q)...
   cdef long pi = 0
