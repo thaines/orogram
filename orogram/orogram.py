@@ -81,7 +81,7 @@ class Orogram:
 
 
   def even(self, epsilon=1e-2, incerr = False):
-    """Judges if there is an even amount of mass inbetween each of the bin centers, i.e. the bins are equally seperated in terms of the distributions CDF. Counts number of gaps (bins-1), divides one by that number and returns True if the mass in very case is within epsilon mltiplied by that number, i.e. the default is within 1%. If incerr is true then it returns a tuple of whether it's even and the maximum delta observed, as scaled by the inverse goal density so it's comparable to epsilon."""
+    """Judges if there is an even amount of mass inbetween each of the bin centers, i.e. the bins are equally seperated in terms of the distributions CDF. Counts number of gaps (bins-1), divides one by that number and returns True if the mass in every case is within epsilon multiplied by that number, i.e. the default is within 1%. If incerr is true then it returns a tuple of whether it's even and the maximum delta observed, as scaled by the inverse goal density so it's comparable to epsilon."""
     goal = 1 / (len(self) - 1)
 
     amount = 0.5 * (self._y[:-1] + self._y[1:]) * (self._x[1:] - self._x[:-1])
