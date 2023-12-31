@@ -17,7 +17,7 @@ import orogram
 
 
 
-# Some paramters...
+# Some parameters...
 low = -4
 high = 4
 samples_orogram = 2**6
