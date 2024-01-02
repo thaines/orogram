@@ -2,7 +2,7 @@
 # Copyright 2023 Tom SF Haines
 
 import numpy
-import scipy
+import scipy.special
 
 
 
