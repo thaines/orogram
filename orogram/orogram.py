@@ -81,7 +81,7 @@ class Orogram:
 
 
   def even(self, epsilon=1e-2, incerr = False):
-    """Judges if there is an even amount of mass inbetween each of the bin centers, i.e. the bins are equally seperated in terms of the distributions CDF. Counts number of gaps (bins-1), divides one by that number and returns True if the mass in every case is within epsilon multiplied by that number, i.e. the default is within 1%. If incerr is true then it returns a tuple of whether it's even and the maximum delta observed, as scaled by the inverse goal density so it's comparable to epsilon."""
+    """Judges if there is an even amount of mass inbetween each of the bin centers, i.e. the bins are equally seperated in the space of the distributions CDF. Counts number of gaps (bins-1), divides one by that number and returns True if the mass in every case is within epsilon multiplied by that number, i.e. the default is within 1%. If incerr is true then it returns a tuple of whether it's even and the maximum delta observed, as scaled by the inverse goal density so it's comparable to epsilon."""
     goal = 1 / (len(self) - 1)
 
     amount = 0.5 * (self._y[:-1] + self._y[1:]) * (self._x[1:] - self._x[:-1])
@@ -95,57 +95,79 @@ class Orogram:
 
   @staticmethod
   def bake(cdf, start, end, resolution = 1024, epsilon = 1e-2, init = 8, maxiter = 128, vectorised = True):
-    """Alternative constructor (static method, returns an Orogram) that bakes a cdf into an Orogram directly. You have to provide a function for evaluating the CDF of that distribution, plus the range to evaluate (it ensures the mass in the range sums to 1). By default it assumes that the CDF functon is vectorised but you can indicate if it is not (vectorised parameter); that will be slow however. This differs from the regular orogram object in that it dynamically distributes bins, i.e. each bin has the same mass in it, to within the given epsilon parameter multiplied by the expected mass within the bin (it defaults to being within 1%). To do this is runs an optimisation where it iteratively constructs Orograms, using the last to provide an approximation to the inverse CDF; the first one is a regular orogram where the number of bins is resolution*init, i.e. init has a memory cost but provides a closer initial solution. maxiter is the maximum number of iterations to do; note that the method even() is what it's using to judge convergance, so you can check if it converged with that. A much better imlementation of this is possible, in terms of speed."""
+    """Alternative constructor (static method, returns an Orogram) that bakes a cdf into an Orogram directly. You have to provide a function for evaluating the CDF of that distribution, plus the range to evaluate (it ensures the mass in the range sums to 1). By default it assumes that the CDF functon is vectorised but you can indicate if it is not (vectorised parameter); that will be slow however. This differs from the regular orogram object in that it dynamically distributes bins, i.e. each bin has the same mass in it, to within the given epsilon parameter multiplied by the expected mass within the bin (it defaults to being within 1%). This is done by first initalising the bin centers using a regular orogram, with the given init paramter being a multiplier for resolution to boost the resolution and get a more accurate initialisation. It then does a biased binary search to refine the bin positions until within the tolerance before constructing the orogram. Note that the even() method tests if an orogram is even; this method may not converge to within the given tolerance so it can be used to verify if it has. maxiter is the maximum number of binary search steps to do. Note that if you want an even sampling in x rather than CDF(x) you should just bake a regular orogram then convert it."""
 
     # Define the goal, i.e. where the split points should be in terms of the cdf...
     splits = numpy.linspace(0.0, 1.0, resolution)
 
     # Create inital Orogram, with a resolution boost...
-    ret = RegOrogram((end-start) / (init * (resolution - 1)))
-    ret.bake(cdf, start, end, vectorised=True)
-    ret = Orogram(ret)
-
-    # Iterate, refining each time...
+    first = RegOrogram((end-start) / (init * (resolution - 1)))
+    first.bake(cdf, start, end, vectorised)
+    
+    # Convert splits to bin centers...
+    centers = first.invcdf(splits)
+    centers[0] = start
+    centers[-1] = end
+    
+    # Some cleanup...
+    del splits
+    del first
+    
+    # Refine bin centers via a biased binary search...
+    low = cdf(centers[0])
+    high = cdf(centers[-1])
+    targ = numpy.linspace(low, high, resolution)
+    
     for _ in range(maxiter):
-      # Get new bin centers from current approximation...
-      centers = ret.invcdf(splits)
+      pass ##############################
 
-      # Calculate split points between the centers...
-      zm1 = numpy.concatenate((centers[:1], centers[:-2]))
-      z0 = centers[:-1]
-      z1 = centers[1:]
-      z2 = numpy.concatenate((centers[2:], centers[-1:]))
+    
+    # Fit probabilities to the final set of bin centers...
+    ## Evaluate the CDF at each bin center...
+    if vectorised:
+      cdf_eval = cdf(centers)
 
-      t = (z2 - z0) / (z2 + z1 - z0 - zm1)
-      divs = (1-t) * z0 + t * z1
-      divs = numpy.concatenate((centers[:1], divs, centers[-1:]))
-
-      # Evaluate cdf at the split points...
-      if vectorised:
-        cummass = cdf(divs)
-
-      else:
-        cummass = numpy.empty(divs.shape, dtype=numpy.float32)
-        for i in range(cummass.shape[0]):
-          cummass[i] = cdf(divs[i])
-
-      # Convert to mass at each bin centre, then normalise...
-      mass = (cummass[1:] - cummass[:-1]).astype(numpy.float32)
-      mass /= mass.sum()
-
-      # Convert mass to probabilities, i.e. factor in area of triangle...
-      prob = 2 * mass
-      prob[:-1] /= z1 - zm1
-      prob[-1] /= centers[-1] - centers[-2]
-
-      # Replace current model with new one...
-      ret = Orogram(centers, prob, norm=False, copy=False)
-
-      # Break if it has converged...
-      if ret.even(epsilon):
+    else:
+      cdf_eval = numpy.empty(centers.shape, dtype=numpy.float32)
+      for i in range(cdf_eval.shape[0]):
+        cdf_eval[i] = cdf(centers[i])
+    
+    ## Renormalise, for safety...
+    cdf_eval -= cdf_eval[0]
+    cdf_eval /= cdf_eval[-1]
+    
+    ## Calculate the target density sum for each gap...
+    density = 2 * (cdf_eval[1:] - cdf_eval[:-1]) / (centers[1:] - centers[:-1])
+      
+    ## Convert to a probability. This works by defining contribution factors, that define what percentage of the density contribution each probability is, then alternating updating those and updating the probabilities until convergence (the contribution factors enforce normalisation)...
+    cont = 0.5 * numpy.ones(density.shape, dtype=numpy.float32)
+    prob = numpy.zeros(centers.shape, dtype=numpy.float32)
+    
+    for _ in range(maxiter):
+      # Update probabilities, treating the two estimates as a range to snap within...
+      prob[0] = (1-cont[0]) * density[0]
+      prob[-1] = cont[-1] * density[-1]
+      esta = ((1-cont) * density)[1:]
+      estb = (cont * density)[:-1]
+      prob[1:-1] = numpy.clip(prob[1:-1], numpy.minimum(esta, estb), numpy.maximum(esta, estb))
+      
+      # Update contributions, with convergence detection...
+      oldcont = cont
+      
+      esta = prob[:-1] / numpy.maximum(1 - cont, 1e-6)
+      estb = prob[1:] / numpy.maximum(cont, 1e-6)
+      
+      cont = numpy.clip(cont, numpy.minimum(esta, estb), numpy.maximum(esta, estb))
+      cont = numpy.clip(cont, 0.0, 1.0)
+      
+      if numpy.fabs(cont - oldcont).max() < 1e-6:
         break
-
-    # Return discovered model...
+      
+      # Little clean up...
+      del esta, estb, oldcont
+    
+    # Create and return fitted model...
+    ret = Orogram(centers, prob, norm=False, copy=False)
     return ret
 
 

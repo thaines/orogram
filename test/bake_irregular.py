@@ -38,7 +38,7 @@ even, err = model.even(incerr=True)
 if even:
   print('Converged')
 else:
-  print(f'Failed; error of {err}')
+  print(f'Not converged; error of {err}')
 print()
 
 
