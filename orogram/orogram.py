@@ -95,7 +95,7 @@ class Orogram:
 
   @staticmethod
   def bake(cdf, start, end, resolution = 1024, epsilon = 1e-2, init = 8, maxiter = 128, vectorised = True):
-    """Alternative constructor (static method, returns an Orogram) that bakes a cdf into an Orogram directly. You have to provide a function for evaluating the CDF of that distribution, plus the range to evaluate (it ensures the mass in the range sums to 1). By default it assumes that the CDF functon is vectorised but you can indicate if it is not (vectorised parameter); that will be slow however. This differs from the regular orogram object in that it dynamically distributes bins, i.e. each bin has the same mass in it, to within the given epsilon parameter multiplied by the expected mass within the bin (it defaults to being within 1%). This is done by first initalising the bin centers using a regular orogram, with the given init paramter being a multiplier for resolution to boost the resolution and get a more accurate initialisation. It then does a biased binary search to refine the bin positions until within the tolerance before constructing the orogram. Note that the even() method tests if an orogram is even; this method may not converge to within the given tolerance so it can be used to verify if it has. maxiter is the maximum number of binary search steps to do. Note that if you want an even sampling in x rather than CDF(x) you should just bake a regular orogram then convert it."""
+    """Alternative constructor (static method, returns an Orogram) that bakes a cdf into an Orogram directly. You have to provide a function for evaluating the CDF of that distribution, plus the range to evaluate (it ensures the mass in the range sums to 1). By default it assumes that the CDF functon is vectorised but you can indicate if it is not (vectorised parameter); that will be slow however. This differs from the regular orogram object in that it dynamically distributes bins, i.e. each bin has the same mass in it, to within the given epsilon parameter multiplied by the expected mass within the bin (it defaults to being within 1%). This is done by first initalising the bin centers using a regular orogram, with the given init paramter being a multiplier for resolution to boost the resolution and get a more accurate initialisation. It then does a biased binary search to refine the bin positions until within the tolerance before constructing the orogram. Note that the even() method tests if an orogram is even; this method may not converge to within the given tolerance so it can be used to verify if it has. maxiter is the maximum number of binary search steps to do. Note that if you want an even sampling in x rather than CDF(x) you should just bake a regular orogram then convert it, and that simplifying that will be better if the distribution isn't that smooth."""
 
     # Define the goal, i.e. where the split points should be in terms of the cdf...
     splits = numpy.linspace(0.0, 1.0, resolution)
@@ -141,7 +141,7 @@ class Orogram:
       
     ## Convert to a probability. This works by defining contribution factors, that define what percentage of the density contribution each probability is, then alternating updating those and updating the probabilities until convergence (the contribution factors enforce normalisation)...
     cont = 0.5 * numpy.ones(density.shape, dtype=numpy.float32)
-    prob = numpy.zeros(centers.shape, dtype=numpy.float32)
+    prob = numpy.ones(centers.shape, dtype=numpy.float32) / (end - start)
     
     for _ in range(maxiter):
       # Update probabilities, treating the two estimates as a range to snap within...
@@ -151,15 +151,13 @@ class Orogram:
       estb = (cont * density)[:-1]
       prob[1:-1] = numpy.clip(prob[1:-1], numpy.minimum(esta, estb), numpy.maximum(esta, estb))
       
-      # Update contributions, with convergence detection...
+      # Scale probabilities so total mass is one...
+      total = (0.5 * (prob[1:] + prob[:-1]) * (centers[1:] - centers[:-1])).sum()
+      prob /= total
+
+      # Update contributions, just matching ratio of current probabilities, with convergence detection...
       oldcont = cont
-      
-      esta = prob[:-1] / numpy.maximum(1 - cont, 1e-6)
-      estb = prob[1:] / numpy.maximum(cont, 1e-6)
-      
-      cont = numpy.clip(cont, numpy.minimum(esta, estb), numpy.maximum(esta, estb))
-      cont = numpy.clip(cont, 0.0, 1.0)
-      
+      cont = numpy.clip(prob[1:] / (prob[:-1] + prob[1:]), 0.0, 1.0)
       if numpy.fabs(cont - oldcont).max() < 1e-6:
         break
       
