@@ -15,6 +15,7 @@ except:
 from . import xentropy
 from . import simplify
 from . import credible
+from .bake import fitgapmass
 
 from .regorogram import RegOrogram
 
@@ -105,12 +106,11 @@ class Orogram:
     first.bake(cdf, start, end, vectorised)
     
     # Convert splits to bin centers...
-    centers = first.invcdf(splits)
+    centers = first.invcdf(splits).astype(numpy.float32)
     centers[0] = start
     centers[-1] = end
     
     # Some cleanup...
-    del splits
     del first
     
     # Refine bin centers via a biased binary search...
@@ -119,9 +119,35 @@ class Orogram:
     targ = numpy.linspace(low, high, resolution)
     
     for _ in range(maxiter):
-      pass ##############################
+      # Evaluate the CDF at each bin center...
+      if vectorised:
+        cdf_eval = cdf(centers)
 
-    
+      else:
+        cdf_eval = numpy.empty(centers.shape, dtype=numpy.float32)
+        for i in range(cdf_eval.shape[0]):
+          cdf_eval[i] = cdf(centers[i])
+
+      # Check for convergence...
+      if numpy.fabs(cdf_eval - targ).max() < (epsilon / resolution):
+        break
+
+      # Identify the set that need to go down and the set that need to go up; the ends are excluded from both sets as they shouldn't move...
+      down = targ<cdf_eval
+      up = cdf_eval<targ
+
+      down[0] = False
+      down[-1] = False
+      up[0] = False
+      up[-1] = False
+
+      # Do linear interpolation, both up and down, using the above masks to update the correct set each time...
+      godown = (centers[:-1] - centers[1:]) * (cdf_eval[1:] - targ[1:]) / (cdf_eval[:-1] - cdf_eval[1:])
+      goup = (centers[1:] - centers[:-1]) * (targ[:-1] - cdf_eval[:-1]) / (cdf_eval[1:] - cdf_eval[:-1])
+
+      centers[down] -= godown[down[1:]]
+      centers[up] += goup[up[:-1]]
+
     # Fit probabilities to the final set of bin centers...
     ## Evaluate the CDF at each bin center...
     if vectorised:
@@ -136,34 +162,13 @@ class Orogram:
     cdf_eval -= cdf_eval[0]
     cdf_eval /= cdf_eval[-1]
     
-    ## Calculate the target density sum for each gap...
-    density = 2 * (cdf_eval[1:] - cdf_eval[:-1]) / (centers[1:] - centers[:-1])
+    ## Calculate the target density for each gap...
+    gapmass = (cdf_eval[1:] - cdf_eval[:-1]).astype(numpy.float32)
       
     ## Convert to a probability. This works by defining contribution factors, that define what percentage of the density contribution each probability is, then alternating updating those and updating the probabilities until convergence (the contribution factors enforce normalisation)...
-    cont = 0.5 * numpy.ones(density.shape, dtype=numpy.float32)
-    prob = numpy.ones(centers.shape, dtype=numpy.float32) / (end - start)
-    
-    for _ in range(maxiter):
-      # Update probabilities, treating the two estimates as a range to snap within...
-      prob[0] = (1-cont[0]) * density[0]
-      prob[-1] = cont[-1] * density[-1]
-      esta = ((1-cont) * density)[1:]
-      estb = (cont * density)[:-1]
-      prob[1:-1] = numpy.clip(prob[1:-1], numpy.minimum(esta, estb), numpy.maximum(esta, estb))
-      
-      # Scale probabilities so total mass is one...
-      total = (0.5 * (prob[1:] + prob[:-1]) * (centers[1:] - centers[:-1])).sum()
-      prob /= total
+    prob = numpy.empty(centers.shape, dtype=numpy.float32)
+    fitgapmass(centers, gapmass, prob)
 
-      # Update contributions, just matching ratio of current probabilities, with convergence detection...
-      oldcont = cont
-      cont = numpy.clip(prob[1:] / (prob[:-1] + prob[1:]), 0.0, 1.0)
-      if numpy.fabs(cont - oldcont).max() < 1e-6:
-        break
-      
-      # Little clean up...
-      del esta, estb, oldcont
-    
     # Create and return fitted model...
     ret = Orogram(centers, prob, norm=False, copy=False)
     return ret
