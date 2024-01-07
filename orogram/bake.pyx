@@ -28,26 +28,26 @@ cpdef void fitgapmass(float[:] center, float[:] gap, float[:] prob):
     # Initialise minimum/maximum value for each output probability...
     for i in range(prob.shape[0]):
       low[i] = 0.0
-      high[i] = gap[i-1] if i>0 and gap[i-1]<gap[i] else gap[i]
+      high[i] = gsum[i-1] if i>0 and gsum[i-1]<gsum[i] else gsum[i]
 
     # Do a forward then backwards pass, updating the minimum/maximum so they are consistent...
     ## Forward...
     for i in range(gsum.shape[0]):
-      v = gap[i] - high[i]
+      v = gsum[i] - high[i]
       if v>low[i+1]:
         low[i+1] = v
 
-      v = gap[i] - low[i]
+      v = gsum[i] - low[i]
       if v<high[i+1]:
         high[i+1] = v
 
     ## Backwards...
     for i in range(gsum.shape[0], 0, -1):
-      v = gap[i-1] - high[i]
+      v = gsum[i-1] - high[i]
       if v>low[i-1]:
         low[i-1] = v
 
-      v = gap[i-1] - low[i]
+      v = gsum[i-1] - low[i]
       if v<high[i-1]:
         high[i-1] = v
 
@@ -55,3 +55,8 @@ cpdef void fitgapmass(float[:] center, float[:] gap, float[:] prob):
     prob[0] = low[0]
     for i in range(1, prob.shape[0]):
       prob[i] = gsum[i-1] - prob[i-1]
+
+      #if prob[i]<low[i]:
+        #prob[i] = low[i]
+      #elif prob[i]>high[i]:
+        #prob[i] = high[i]
