@@ -78,16 +78,17 @@ params = mix4_params(args.dists, 0)
 
 
 # Array of sample counts, plus how far into the array to plot...
-samples = numpy.geomspace(3, args.limit, args.steps)
+samples = numpy.geomspace(10, args.limit, args.steps)
 samples = numpy.append(samples, [2**16 if args.quick else 2**24])
 samples = numpy.unique(samples.astype(int))
-show = numpy.searchsorted(samples, args.limit)
+show = numpy.searchsorted(samples, args.limit+1)
 
 
 
 # Mega loop — for each parameter set and each sample count calculate entropy, with both numerical integration and my analytic approach, recording them all in a giant table...
 entropy_ni = numpy.empty((params.shape[0], samples.shape[0]))
 entropy = numpy.empty((params.shape[0], samples.shape[0]))
+#entropy_cdf = numpy.empty((params.shape[0], samples.shape[0]))
 
 for pi in range(params.shape[0]):
   print(f'\r{pi} of {params.shape[0]}', end='')
@@ -103,6 +104,10 @@ for pi in range(params.shape[0]):
     # Calculate entropy both ways...
     entropy_ni[pi, si] = model.entropynumint(samples[si])
     entropy[pi, si] = model.entropy()
+    
+    # Now do it with a regular spacing in CDF space, for a different result...
+    #model = orogram.Orogram.bake(pcdf, low, high, samples[si])
+    #entropy_cdf[pi, si] = model.entropy()
 
 print(f'\r{params.shape[0]} of {params.shape[0]}')
 print()
@@ -117,6 +122,9 @@ pcent_ni = numpy.percentile(err_ni, percentiles, axis=0)
 
 err = numpy.fabs(entropy - entropy_ni[:,-1,None])
 pcent = numpy.percentile(err, percentiles, axis=0)
+
+#err_cdf = numpy.fabs(entropy_cdf - entropy_ni[:,-1,None])
+#pcent_cdf = numpy.percentile(err_cdf, percentiles, axis=0)
 
 
 
@@ -135,13 +143,19 @@ plt.ylabel(r'$\epsilon$')
 plt.xscale('log')
 plt.yscale('log')
 
-plt.plot(samples[:show], pcent_ni[0,:show], 'C0-', label=r'$50^\textrm{th}$ percentile of numerical integration')
-plt.plot(samples[:show], pcent_ni[1,:show], 'C0--', label=r'$75^\textrm{th}$ percentile of numerical integration')
-plt.plot(samples[:show], pcent_ni[2,:show], 'C0:', label=r'$95^\textrm{th}$ percentile of numerical integration')
+plt.plot([10, 15], [0.5, 1], marker='None', linestyle='None', label='Numerical integration')
+plt.plot(samples[:show], pcent_ni[0,:show], 'C0-', label=r'$50^\textrm{th}$ percentile')
+plt.plot(samples[:show], pcent_ni[1,:show], 'C0--', label=r'$75^\textrm{th}$ percentile')
+plt.plot(samples[:show], pcent_ni[2,:show], 'C0:', label=r'$95^\textrm{th}$ percentile')
 
-plt.plot(samples[:show], pcent[0,:show], 'C1-', label=r'$50^\textrm{th}$ percentile of analytic')
-plt.plot(samples[:show], pcent[1,:show], 'C1--', label=r'$75^\textrm{th}$ percentile of analytic')
-plt.plot(samples[:show], pcent[2,:show], 'C1:', label=r'$95^\textrm{th}$ percentile of analytic')
+plt.plot([10, 15], [0.5, 1], marker='None', linestyle='None', label='Analytic')
+plt.plot(samples[:show], pcent[0,:show], 'C1-', label=r'$50^\textrm{th}$ percentile')
+plt.plot(samples[:show], pcent[1,:show], 'C1--', label=r'$75^\textrm{th}$ percentile')
+plt.plot(samples[:show], pcent[2,:show], 'C1:', label=r'$95^\textrm{th}$ percentile')
 
-plt.legend(loc='upper right')
+#plt.plot(samples[:show], pcent_cdf[0,:show], 'C2-', label=r'$50^\textrm{th}$ percentile of distributed analytic')
+#plt.plot(samples[:show], pcent_cdf[1,:show], 'C2--', label=r'$75^\textrm{th}$ percentile of distributed analytic')
+#plt.plot(samples[:show], pcent_cdf[2,:show], 'C2:', label=r'$95^\textrm{th}$ percentile of distributed analytic')
+
+plt.legend(loc='upper right', ncol=2)
 plt.savefig(f'quad_convergence.pdf', bbox_inches='tight')
