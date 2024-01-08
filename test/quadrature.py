@@ -141,7 +141,7 @@ plt.figure(figsize=[8, 4])
 plt.xlabel(r'$\textrm{sample count}$')
 plt.ylabel(r'$\epsilon$')
 plt.xscale('log')
-plt.yscale('log')
+#plt.yscale('log')
 
 plt.plot([10, 15], [0.5, 1], marker='None', linestyle='None', label='Numerical integration')
 plt.plot(samples[:show], pcent_ni[0,:show], 'C0-', label=r'$50^\textrm{th}$ percentile')
