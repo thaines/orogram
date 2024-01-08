@@ -14,7 +14,7 @@ cpdef void fitgapmass(float[:] center, float[:] gap, float[:] prob):
   cdef long i
   cdef float est1, est2
   cdef float low, high
-  cdef bint change = True
+  cdef bint change
   
   # Allocate needed memory...
   cdef float[:] average = numpy.empty(gap.shape[0], dtype=numpy.float32)
@@ -31,7 +31,7 @@ cpdef void fitgapmass(float[:] center, float[:] gap, float[:] prob):
     prob[average.shape[0]] = average[average.shape[0]-1]
     
     # Do forwards/backwards passes of updating each probability to be within the range the constraints imply - improves things a little...
-    while change:
+    for _ in range(128):
       change = False
       # Forwards...
       for i in range(1, average.shape[0]):
@@ -78,6 +78,10 @@ cpdef void fitgapmass(float[:] center, float[:] gap, float[:] prob):
       prob[0] = 2*average[0] - prob[1]
       if prob[0]<0.0:
         prob[0] = 0.0
+      
+      # Exit early if done...
+      if not change:
+        break
 
 
 
