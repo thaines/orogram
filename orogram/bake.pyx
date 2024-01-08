@@ -9,9 +9,80 @@ import numpy
 cimport numpy
 
 
-
 cpdef void fitgapmass(float[:] center, float[:] gap, float[:] prob):
   """Given bin centers this outputs the probabilities (into prob) of a piecewise linear PDF (Orogram) using those centers such that the probability mass between each pair of centers is as given in the gap array, which is of length one less than center/prob."""
+  cdef long i
+  cdef float est1, est2
+  cdef float low, high
+  cdef bint change = True
+  
+  # Allocate needed memory...
+  cdef float[:] average = numpy.empty(gap.shape[0], dtype=numpy.float32)
+  
+  with nogil:
+    # Convert gaps into average, i.e. the constraint becomes that two adjacent output probabilites must average to the given value...
+    for i in range(average.shape[0]):
+      average[i] = gap[i] / (center[i+1] - center[i])
+      
+    # Initialise prob with the average of adjacent gaps...
+    prob[0] = average[0]
+    for i in range(1, average.shape[0]):
+      prob[i] = 0.5*(average[i-1] + average[i])
+    prob[average.shape[0]] = average[average.shape[0]-1]
+    
+    # Do forwards/backwards passes of updating each probability to be within the range the constraints imply - improves things a little...
+    while change:
+      change = False
+      # Forwards...
+      for i in range(1, average.shape[0]):
+        est1 = 2*average[i-1] - prob[i-1]
+        est2 = 2*average[i] - prob[i+1]
+        
+        low = est1 if est1<est2 else est2
+        high = est1 if est1>est2 else est2
+        
+        if low < 0.0:
+          low = 0.0
+        
+        if prob[i]<low:
+          change = True
+          prob[i] = low
+        
+        if prob[i]>high:
+          change = True
+          prob[i] = high
+
+      prob[average.shape[0]] = 2*average[average.shape[0]-1] - prob[average.shape[0]-1]
+      if prob[average.shape[0]]<0.0:
+        prob[average.shape[0]] = 0.0
+      
+      # Backwards...
+      for i in range(average.shape[0]-1, 0, -1):
+        est1 = 2*average[i-1] - prob[i-1]
+        est2 = 2*average[i] - prob[i+1]
+        
+        low = est1 if est1<est2 else est2
+        high = est1 if est1>est2 else est2
+        
+        if low < 0.0:
+          low = 0.0
+        
+        if prob[i]<low:
+          change = True
+          prob[i] = low
+        
+        if prob[i]>high:
+          change = True
+          prob[i] = high
+      
+      prob[0] = 2*average[0] - prob[1]
+      if prob[0]<0.0:
+        prob[0] = 0.0
+
+
+
+cpdef void fitgapmass_meh(float[:] center, float[:] gap, float[:] prob):
+  """Given bin centers this outputs the probabilities (into prob) of a piecewise linear PDF (Orogram) using those centers such that the probability mass between each pair of centers is as given in the gap array, which is of length one less than center/prob. This version solves the problem exactly... but then suffers from accidental hedgehog. Have dropped for now, as a basic solver, while not as precise, gives a more reasonable result and this isn't my focus at this time."""
   cdef long i
   cdef float v
 
