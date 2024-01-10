@@ -9,6 +9,7 @@ rm *.pdf
 cd ..
 
 cd test
+rm -R __pycache__
 rm *.pdf
 rm *.svg
 cd ..
