@@ -88,7 +88,7 @@ cdef double secxentropy_fast(float p0, float p1, float q0, float q1, double log_
   cdef double qsum = q0 + q1
   cdef double top = p1*q0*q0 - p0*q1*q1
   
-  cdef double spqdeltasqr = fabs(qdelta)
+  cdef double spqdeltasqr = qdelta
   spqdeltasqr *= spqdeltasqr
   if spqdeltasqr<1e-64:
     spqdeltasqr = 1e-64

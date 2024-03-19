@@ -24,6 +24,7 @@ tasks = [([0.0, 0.5, 1.0], [2.0, 0.0, 2.0], 'sawtooth'),
 
 t = numpy.linspace(0.0, 1.0, 256)
 crossentropy = numpy.empty(t.shape[0])
+crossentropy_fast = numpy.empty(t.shape[0])
 
 for px, py, name in tasks:
   # Calculate cross entropy...
@@ -33,7 +34,8 @@ for px, py, name in tasks:
     for s in range(len(px)-1):
       pstart = (1 - px[s]) * (1 - t[i]) + px[s] * t[i]
       pend = (1 - px[s+1]) * (1 - t[i]) + px[s+1] * t[i]
-      crossentropy[i] += orogram.linear_crossentropy(px[s+1] - px[s], py[s], py[s+1], pstart, pend)
+      crossentropy[i] += orogram.linear_crossentropy(px[s+1] - px[s], py[s], py[s+1], pstart, pend, False)
+      crossentropy_fast[i] += orogram.linear_crossentropy(px[s+1] - px[s], py[s], py[s+1], pstart, pend, True)
 
   # Plot a graph...
   fig, ax1 = plt.subplots(figsize=[6, 6])
@@ -48,5 +50,7 @@ for px, py, name in tasks:
   ax2.set_ylabel('nats', color='red')
   ax2.set_ylim([0.0, crossentropy.max()*1.05])
   ax2.plot(t, crossentropy, color='red')
+
+  ax2.plot(t, crossentropy_fast, color='green')
 
   fig.savefig(f'vis_{name}.svg', bbox_inches='tight')
