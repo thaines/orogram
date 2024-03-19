@@ -12,7 +12,7 @@ setup(
   author = 'Tom SF Haines',
   author_email = 'thaines@gmail.com',
   description = 'A library for working with 1D PDFs represented with piecewise linear functions.',
-  license = 'Unselected',
+  license = ' Apache 2.0',
   packages = ['orogram'],
   ext_modules = cythonize('orogram/*.pyx', include_path=[numpy.get_include()]),
   install_requires = ['numpy'],

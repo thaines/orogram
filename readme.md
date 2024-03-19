@@ -16,4 +16,3 @@ This library was created for the paper
 * `Orogram` — An orogram with irregularly spaced bins. Reasonable set of features, but immutable and hence not for data capture. Simpler data structures so typically faster than `RegOrogram`. Otherwise does its best to match the `RegOrogram` feature set.
 
 There are demoes of how to use the libary in the `test` folder.
-
