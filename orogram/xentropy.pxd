@@ -11,4 +11,4 @@
 # cython: wraparound=False
 # cython: nonecheck=False
 
-cpdef double section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1) nogil
+cpdef double section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1, bint fast = *) noexcept nogil

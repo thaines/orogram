@@ -18,7 +18,12 @@ from libc.math cimport log, exp, fabs, INFINITY
 
 
 
-cpdef double section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1) nogil:
+# A function pointer type matching the calling convention of the two ways of calculating cross entropy given below...
+ctypedef double (*section_crossentropy_ptr) (float, float, float, float, double, double) noexcept nogil
+
+
+
+cdef double secxentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1) noexcept nogil:
   """Solves integral for a linear section as needed to calculate cross entropy. Internals carefully ordered to maximise numerical stability, but really don't think that's required - just being paranoid."""
   # Early exit if it's zero...
   if p0<1e-64 and p1<1e-64:
@@ -72,11 +77,48 @@ cpdef double section_crossentropy(float p0, float p1, float q0, float q1, double
 
 
 
-cpdef float reg_entropy(float[:] prob, float spacing) nogil:
+cdef double secxentropy_fast(float p0, float p1, float q0, float q1, double log_q0, double log_q1) noexcept nogil:
+  """Fast version of secxentropy() that uses a different form of the equation such that no if statement / infinite loop is needed. Downside that it's an approximation, so not quite right in flat regions. It's also actually slower to evaluate in the angled regions, so can be slower!"""
+  # Early exit if it's zero...
+  if p0<1e-64 and p1<1e-64:
+    return 0.0
+  
+  cdef double pdelta = p1 - p0
+  cdef double qdelta = q1 - q0
+  cdef double qsum = q0 + q1
+  cdef double top = p1*q0*q0 - p0*q1*q1
+  
+  cdef double spqdeltasqr = fabs(qdelta)
+  spqdeltasqr *= spqdeltasqr
+  if spqdeltasqr<1e-64:
+    spqdeltasqr = 1e-64
+  
+  cdef double ret = -0.5 * (p0*log_q0 + p1*log_q1)
+  ret += 0.25 * pdelta * qdelta / qsum
+  ret += top * qdelta / (3*qsum*qsum*qsum)
+  ret += 0.5 * top * (log_q1 - log_q0) / spqdeltasqr
+  
+  return ret
+
+
+
+cpdef double section_crossentropy(float p0, float p1, float q0, float q1, double log_q0, double log_q1, bint fast = False) noexcept nogil:
+  """External access to what is really an internal method: the ability to calculate the cross entropy between two linear sections."""
+  if fast:
+    return secxentropy_fast(p0, p1, q0, q1, log_q0, log_q1)
+  else:
+    return secxentropy(p0, p1, q0, q1, log_q0, log_q1)
+
+
+
+cpdef float reg_entropy(float[:] prob, float spacing, bint fast = False) noexcept nogil:
   """Calculates entropy of a regular orogram using the analytic equations I've derived."""
   cdef int i
   cdef double ret = 0.0
   cdef double logp_last, logp
+  
+  cdef section_crossentropy_ptr sce = secxentropy_fast if fast else secxentropy
+
 
   logp_last = log(prob[0]) if prob[0]>=1e-64 else -150
   
@@ -85,7 +127,7 @@ cpdef float reg_entropy(float[:] prob, float spacing) nogil:
     logp = log(prob[i]) if prob[i]>=1e-64 else -150
 
     # Sum in segment (could be more efficient, as below function call is generic)...
-    ret += spacing * section_crossentropy(prob[i-1], prob[i], prob[i-1], prob[i], logp_last, logp)
+    ret += spacing * sce(prob[i-1], prob[i], prob[i-1], prob[i], logp_last, logp)
     
     # Move to next...
     logp_last = logp
@@ -94,11 +136,14 @@ cpdef float reg_entropy(float[:] prob, float spacing) nogil:
 
 
 
-cpdef float irr_entropy(float[:] x, float[:] prob) nogil:
+cpdef float irr_entropy(float[:] x, float[:] prob, bint fast = False) noexcept nogil:
   """Calculates entropy of an irregular orogram using the analytic equations I've derived."""
   cdef int i
   cdef double ret = 0.0
   cdef double logp_last, logp
+  
+  cdef section_crossentropy_ptr sce = secxentropy_fast if fast else secxentropy
+  
   
   logp_last = log(prob[0]) if prob[0]>=1e-64 else -150
 
@@ -107,7 +152,7 @@ cpdef float irr_entropy(float[:] x, float[:] prob) nogil:
     logp = log(prob[i]) if prob[i]>=1e-64 else -150
 
     # Sum in segment (could be more efficient, as below function call is generic)...
-    ret += (x[i] - x[i-1]) * section_crossentropy(prob[i-1], prob[i], prob[i-1], prob[i], logp_last, logp)
+    ret += (x[i] - x[i-1]) * sce(prob[i-1], prob[i], prob[i-1], prob[i], logp_last, logp)
 
     # Move to next...
     logp_last = logp
@@ -116,7 +161,7 @@ cpdef float irr_entropy(float[:] x, float[:] prob) nogil:
 
 
 
-cpdef float aligned_crossentropy(long blocksize, float spacing, int p_start, int p_end, p_dic, q_dic, float p_norm, float q_norm):
+cpdef float aligned_crossentropy(long blocksize, float spacing, int p_start, int p_end, p_dic, q_dic, float p_norm, float q_norm, bint fast = False) noexcept:
   """Calculates the cross entropy (nats) between two regularly spaced orograms whose bins are in alignment."""
   # Setup position information and return...
   cdef long i = p_start # Could +1, but then q_prev needs setting!
@@ -124,6 +169,9 @@ cpdef float aligned_crossentropy(long blocksize, float spacing, int p_start, int
   cdef float q_prev = 0.0, q_curr
   cdef double log_q_prev = -150, log_q_curr # -150 ~= log(1e-64)
   cdef double ret = 0.0
+  
+  cdef section_crossentropy_ptr sce = secxentropy_fast if fast else secxentropy
+  
   
   # Block indices and pointers...
   cdef long blockindex = i // blocksize
@@ -144,7 +192,7 @@ cpdef float aligned_crossentropy(long blocksize, float spacing, int p_start, int
       log_q_curr = log(q_curr) if q_curr>=1e-64 else -150
       
       # Calculate cross entropy for section...
-      ret += spacing * section_crossentropy(p_prev, p_curr, q_prev, q_curr, log_q_prev, log_q_curr)
+      ret += spacing * sce(p_prev, p_curr, q_prev, q_curr, log_q_prev, log_q_curr)
       
       # Increment...
       i += 1
@@ -162,7 +210,7 @@ cpdef float aligned_crossentropy(long blocksize, float spacing, int p_start, int
           # Update p pointer...
           if blockindex not in p_dic:
             # Last term of last block...
-            ret += spacing * section_crossentropy(p_prev, 0.0, q_prev, 0.0, log_q_prev, -150)
+            ret += spacing * sce(p_prev, 0.0, q_prev, 0.0, log_q_prev, -150)
             
             # Move on...
             i = blockbase + blocksize
@@ -187,7 +235,7 @@ cpdef float aligned_crossentropy(long blocksize, float spacing, int p_start, int
 
 
 
-cpdef float misaligned_crossentropy(int p_start, int p_end, p_dic, q_dic, float p_norm, float q_norm, long p_blocksize, long q_blocksize, float p_spacing, float q_spacing):
+cpdef float misaligned_crossentropy(int p_start, int p_end, p_dic, q_dic, float p_norm, float q_norm, long p_blocksize, long q_blocksize, float p_spacing, float q_spacing, bint fast = False) noexcept:
   """Calculates the cross entropy (nats) between two regularly spaced orograms where the bins are not aligned."""
   cdef double ret = 0.0
   
@@ -220,6 +268,8 @@ cpdef float misaligned_crossentropy(int p_start, int p_end, p_dic, q_dic, float 
   cdef float pt_next, qt_next, width
   cdef float p0, p1 = -1, q0, q1 = 0
   cdef double log_q0, log_q1 = -150
+  
+  cdef section_crossentropy_ptr sce = secxentropy_fast if fast else secxentropy
   
   
   # Loop each linear section of the two orograms, which will be irregular due to the misalignment...
@@ -274,7 +324,7 @@ cpdef float misaligned_crossentropy(int p_start, int p_end, p_dic, q_dic, float 
       log_q1 = log(q1) if q1>=1e-64 else -150
       
       # Calculate cross entropy for this section...
-      ret += width*section_crossentropy(p0, p1, q0, q1, log_q0, log_q1)
+      ret += width*sce(p0, p1, q0, q1, log_q0, log_q1)
       
       # Move indices forwards to next linear section...
       if pt_next > (1.0 - 1e-12):
@@ -297,7 +347,7 @@ cpdef float misaligned_crossentropy(int p_start, int p_end, p_dic, q_dic, float 
 
 
 
-cpdef float irregular_crossentropy(float[:] p_x, float[:] p_y, float[:] q_x, float[:] q_y) nogil:
+cpdef float irregular_crossentropy(float[:] p_x, float[:] p_y, float[:] q_x, float[:] q_y, bint fast = False) noexcept nogil:
   """Calculates the cross entropy (nats) between two irregularly spaced orograms."""
   cdef double ret = 0.0
   
@@ -308,6 +358,9 @@ cpdef float irregular_crossentropy(float[:] p_x, float[:] p_y, float[:] q_x, flo
   cdef long low, high, half
   cdef long qi
   cdef float qt
+  
+  cdef section_crossentropy_ptr sce = secxentropy_fast if fast else secxentropy
+  
   
   if p_x[pi] < q_x[0]:
     qi = 0
@@ -392,7 +445,7 @@ cpdef float irregular_crossentropy(float[:] p_x, float[:] p_y, float[:] q_x, flo
     log_q1 = log(q1) if q1>=1e-64 else -150
     
     # Calculate cross entropy for this section...
-    ret += width*section_crossentropy(p0, p1, q0, q1, log_q0, log_q1)
+    ret += width*sce(p0, p1, q0, q1, log_q0, log_q1)
     
     # Move indices forward to next linear section...
     if pt_next > (1.0 - 1e-12):
@@ -416,7 +469,7 @@ cpdef float irregular_crossentropy(float[:] p_x, float[:] p_y, float[:] q_x, flo
 
 
 
-cpdef double mean(double[:] vals) nogil:
+cpdef double mean(double[:] vals) noexcept nogil:
   """Calculates and returns the mean in a way that is reasonably safe to underflow. Used by the numerical integration versions, to maximise fairness."""
   cdef double bsize = 256.0
   cdef double ret0 = 0.0, ret1 = 0.0, ret2 = 0.0
