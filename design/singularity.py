@@ -36,10 +36,16 @@ print(f'Solution: {sol[0]} + {sol[1]}*x + {sol[2]}*x^2 + {sol[3]}*x^3')
 # Generate approximation graph...
 y_approx1 = (a @ sol)
 
+err1 = numpy.fabs(y_approx1 - y).max()
+print(f'Approximation 1 maximum error: {err1}')
+
 
 
 # Also do a simplified approximation, after noting that only one term is really non-zero...
 y_approx2 = numpy.power(x,3) / 3
+
+err2 = numpy.fabs(y_approx2 - y).max()
+print(f'Approximation 2 maximum error: {err2}')
 
 
 
