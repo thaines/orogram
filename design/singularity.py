@@ -52,9 +52,25 @@ print(f'Approximation 2 maximum error: {err2}')
 # Plot...
 plt.figure(figsize=[12, 6])
 
-plt.plot(x, y, linewidth=1, label='Correct', color='C0')
+plt.plot(x, y, linewidth=2, label='Correct', color='C0')
 plt.plot(x, y_approx1, linewidth=1, label='Approximation 1', color='C1')
 plt.plot(x, y_approx2, linewidth=1, label='Approximation 2', color='C2')
 
 plt.legend()
 plt.savefig('singularity.pdf', bbox_inches='tight')
+
+
+
+# Error as distance from origin for appoximation 2, to set threhsold sensibly...
+x = numpy.linspace(0, 1e-3, 1025)
+
+y = numpy.zeros(x.shape)
+for n in range(1, 1024*4, 2):
+  y += numpy.power(x, n+2) / (n+2)
+
+y_approx2 = numpy.power(x,3) / 3
+
+
+plt.figure(figsize=[12, 6])
+plt.plot(x, numpy.fabs(y - y_approx2), linewidth=1, color='C0')
+plt.savefig('error.pdf', bbox_inches='tight')
