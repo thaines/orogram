@@ -20,7 +20,7 @@ x = numpy.linspace(-1e-4, 1e-4, 1025)
 
 y = numpy.zeros(x.shape)
 for n in range(1, 1024*4, 2):
-  y += numpy.power(x, n+2) / (n+2)
+  y += numpy.power(x, n) / (n+2)
 
 
 
@@ -37,24 +37,32 @@ print(f'Solution: {sol[0]} + {sol[1]}*x + {sol[2]}*x^2 + {sol[3]}*x^3')
 y_approx1 = (a @ sol)
 
 err1 = numpy.fabs(y_approx1 - y).max()
-print(f'Approximation 1 maximum error: {err1}')
+print(f'Approximation poly x^3 maximum error: {err1}')
 
 
-
-# Also do a simplified approximation, after noting that only one term is really non-zero...
-y_approx2 = numpy.power(x,3) / 3
+x / 3
+# First term of sequence only...
+y_approx2 = x / 3
 
 err2 = numpy.fabs(y_approx2 - y).max()
-print(f'Approximation 2 maximum error: {err2}')
+print(f'Approximation 1 term maximum error: {err2}')
 
+
+
+# First two terms of sequence...
+y_approx3 = x / 3 + numpy.power(x, 3) / 5
+
+err3 = numpy.fabs(y_approx3 - y).max()
+print(f'Approximation 2 terms maximum error: {err3}')
 
 
 # Plot...
 plt.figure(figsize=[12, 6])
 
 plt.plot(x, y, linewidth=2, label='Correct', color='C0')
-plt.plot(x, y_approx1, linewidth=1, label='Approximation 1', color='C1')
-plt.plot(x, y_approx2, linewidth=1, label='Approximation 2', color='C2')
+plt.plot(x, y_approx1, linewidth=1, label='Approx poly x^3', color='C1')
+plt.plot(x, y_approx2, linewidth=1, label='Approx 1 term', color='C2')
+plt.plot(x, y_approx3, linewidth=1, label='Approx 2 term', color='C3')
 
 plt.legend()
 plt.savefig('singularity.pdf', bbox_inches='tight')
