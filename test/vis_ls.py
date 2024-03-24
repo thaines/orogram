@@ -29,6 +29,7 @@ crossentropy_fast = numpy.empty(t.shape[0])
 for px, py, name in tasks:
   # Calculate cross entropy...
   crossentropy[:] = 0.0
+  crossentropy_fast[:] = 0.0
 
   for i in range(crossentropy.shape[0]):
     for s in range(len(px)-1):
@@ -51,6 +52,6 @@ for px, py, name in tasks:
   ax2.set_ylim([0.0, crossentropy.max()*1.05])
   ax2.plot(t, crossentropy, color='red')
 
-  ax2.plot(t, crossentropy_fast, color='green')
+  ax2.plot(t, crossentropy_fast, color='green', linestyle=':')
 
   fig.savefig(f'vis_{name}.svg', bbox_inches='tight')

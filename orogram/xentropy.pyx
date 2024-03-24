@@ -78,7 +78,7 @@ cdef double secxentropy(float p0, float p1, float q0, float q1, double log_q0, d
 
 
 cdef double secxentropy_fast(float p0, float p1, float q0, float q1, double log_q0, double log_q1) noexcept nogil:
-  """Fast version of secxentropy() that uses a different form of the equation such that no if statement / infinite loop is needed. Downside that it's an approximation, so not quite right in flat regions. It's also actually slower to evaluate in the angled regions, so can be slower!"""
+  """Fast version of secxentropy() that only evaluates the first two terms of the infinite loop, on the grounds that's actually enough to get to float precision. Downside that it's an approximation, so some error can appear in flat regions. It's also coded to be in a form more suitable for a GPU, which is actually slightly slower because it's minimising branching."""
   # Early exit if it's zero...
   if p0<1e-64 and p1<1e-64:
     return 0.0
@@ -86,17 +86,19 @@ cdef double secxentropy_fast(float p0, float p1, float q0, float q1, double log_
   cdef double pdelta = p1 - p0
   cdef double qdelta = q1 - q0
   cdef double qsum = q0 + q1
+
+  cdef double inner = qdelta / qsum
   cdef double top = p1*q0*q0 - p0*q1*q1
-  
-  cdef double spqdeltasqr = qdelta
-  spqdeltasqr *= spqdeltasqr
-  if spqdeltasqr<1e-64:
-    spqdeltasqr = 1e-64
   
   cdef double ret = -0.5 * (p0*log_q0 + p1*log_q1)
   ret += 0.25 * pdelta * qdelta / qsum
-  ret += top * qdelta / (3*qsum*qsum*qsum)
-  ret += 0.5 * top * (log_q1 - log_q0) / spqdeltasqr
+
+  if fabs(qdelta)>1e-5:
+    ret += 0.5 * top * (log_q1 - log_q0) / (qdelta * qdelta)
+    ret -= top / (qsum * qdelta)
+
+  else:
+    ret += (inner / 3 + inner * inner * inner / 5) * top / (qsum*qsum)
   
   return ret
 
