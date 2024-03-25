@@ -40,7 +40,7 @@ err1 = numpy.fabs(y_approx1 - y).max()
 print(f'Approximation poly x^3 maximum error: {err1}')
 
 
-x / 3
+
 # First term of sequence only...
 y_approx2 = x / 3
 
