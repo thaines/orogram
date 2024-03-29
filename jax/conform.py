@@ -1,0 +1,131 @@
+#! /usr/bin/env python3
+# Copyright 2024 Tom SF Haines
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+#   http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+from functools import partial
+import matplotlib.pyplot as plt
+
+import jax
+import jax.numpy as jnp
+
+from regorojax import *
+
+jax.config.update('jax_platforms', 'cpu')
+jax.config.update('jax_debug_nans', True)
+
+
+
+# Generate some points from a distribution...
+rng = jax.random.key(0)
+
+rng, key = jax.random.split(rng)
+x = jax.random.normal(key, (256,))
+
+
+
+# Setup and create an initial orogram...
+low = jnp.floor(x.min())
+high = jnp.ceil(x.max())
+bins = int(jnp.sqrt(x.shape[0]))
+delta = spacing(low, high, bins)
+print(f'low = {low:.3f}, high = {high:.3f}, bins = {bins}, delta = {delta:.3f}')
+
+edges = jnp.linspace(low, high, bins)
+px = orogram(x, low, high, bins)
+
+
+
+# Generate a target distribution...
+target = jnp.fabs(jnp.sin(jnp.clip(edges * jnp.pi / 3, -3, 3)))
+area = 0.5*(target[:-1] + target[1:]).sum() * (high - low) / (target.shape[0]+1)
+target /= area
+
+
+
+# Define cost and it's gradient, as required to move points towards target distribution...
+@partial(jax.jit, static_argnames=('bins',))
+def cost(x, target, low, high, bins):
+  px = orogram(x, low, high, bins)
+
+  delta = spacing(low, high, bins)
+  return crossentropy(px, target, delta) - crossentropy(px, px, delta)
+
+grad = jax.grad(cost)
+
+initial = cost(x, target, low, high, bins)
+print(f'initial kl = {initial:.3f}')
+
+
+
+# Visualise the initial state, target and gradient...
+initial_grad = grad(x, target, low, high, bins)
+print('grad:')
+print(f'  min = {initial_grad.min():.3f}')
+print(f'  max = {initial_grad.max():.3f}')
+
+for bi in jnp.where(jnp.logical_not(jnp.isfinite(initial_grad)))[0][:3]:
+  print(f'  bad at {bi} = {initial_grad[bi]}')
+  print(f'    x = {x[bi]:.3f}')
+
+plt.figure(figsize=[6, 3])
+plt.xlabel(r'$x$')
+plt.ylabel(r'$P(x)$')
+
+plt.plot(edges, px, label='start pdf')
+plt.plot(edges, target, label='goal pdf')
+
+rng, key = jax.random.split(rng)
+yrand = px.max()*(0.2 + 0.6*jax.random.uniform(key, (64,)))
+for i in range(yrand.shape[0]):
+  plt.annotate('', xy=(x[i]-10*initial_grad[i],yrand[i]), xytext=(x[i],yrand[i]), xycoords='data', textcoords='data', arrowprops=dict(width=0.1, headwidth=2, headlength=2))
+  #plt.arrow(x[i], yrand[i], -initial_grad[i], 0.0, width=0.0005)
+
+plt.legend()
+plt.savefig(f'conform_initial.pdf', bbox_inches='tight')
+
+
+
+# Use Nesterov to move points to match target distribution...
+stepsize = 0.1
+momentum = 0.75
+steps = 512
+
+ngrad = jnp.zeros(x.shape)
+
+print('optimising:')
+for itr in range(steps):
+  print(f'\r  {itr+1} of {steps}', end='')
+
+  dx = grad(x - momentum*ngrad, target, low, high, bins)
+  ngrad = momentum*ngrad + stepsize*dx
+  x -= ngrad
+
+print()
+
+
+
+# Report and graph...
+final = cost(x, target, low, high, bins)
+end_grad = grad(x, target, low, high, bins)
+px = orogram(x, low, high, bins)
+
+print(f'final kl = {final:.3f}')
+
+plt.figure(figsize=[6, 3])
+plt.xlabel(r'$x$')
+plt.ylabel(r'$P(x)$')
+
+plt.plot(edges, px, label='end pdf')
+plt.plot(edges, target, label='goal pdf')
+
+for i in range(yrand.shape[0]):
+  plt.annotate('', xy=(x[i]-10*end_grad[i],yrand[i]), xytext=(x[i],yrand[i]), xycoords='data', textcoords='data', arrowprops=dict(width=0.1, headwidth=2, headlength=2))
+  #plt.arrow(x[i], yrand[i], -end_grad[i], 0.0, width=0.0005)
+
+plt.legend()
+plt.savefig(f'conform_end.pdf', bbox_inches='tight')
