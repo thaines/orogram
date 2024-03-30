@@ -38,7 +38,7 @@ def orogram(x, low, high, bins):
   
   # Normalise to integrate to 1 and return...
   area = 0.5 * (density[:-1] + density[1:]).sum() * (high - low) / (density.shape[0]-1)
-  return density / area
+  return density / jnp.maximum(area, 1e-10)
 
 
 
