@@ -7,7 +7,6 @@
 
 # Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
-from functools import partial
 import matplotlib.pyplot as plt
 
 import jax
@@ -48,22 +47,22 @@ target /= area
 
 
 # Define cost and it's gradient, as required to move points towards target distribution...
-@partial(jax.jit, static_argnames=('bins',))
-def cost(x, target, low, high, bins):
-  px = orogram(x, low, high, bins)
+@jax.jit
+def cost(x, target, low, high):
+  px = orogram(x, low, high, target.shape[0])
 
-  delta = spacing(low, high, bins)
+  delta = spacing(low, high, target.shape[0])
   return crossentropy(px, target, delta) - crossentropy(px, px, delta)
 
-grad = jax.jit(jax.grad(cost), static_argnames=('bins',))
+grad = jax.jit(jax.grad(cost))
 
-initial = cost(x, target, low, high, bins)
+initial = cost(x, target, low, high)
 print(f'initial kl = {initial:.3f}')
 
 
 
 # Visualise the initial state, target and gradient...
-initial_grad = grad(x, target, low, high, bins)
+initial_grad = grad(x, target, low, high)
 print('grad:')
 print(f'  min = {initial_grad.min():.3f}')
 print(f'  max = {initial_grad.max():.3f}')
@@ -101,7 +100,7 @@ print('optimising:')
 for itr in range(steps):
   print(f'\r  {itr+1} of {steps}', end='')
 
-  dx = grad(x - momentum*ngrad, target, low, high, bins)
+  dx = grad(x - momentum*ngrad, target, low, high)
   ngrad = momentum*ngrad + stepsize*dx
   x -= ngrad
 
@@ -110,8 +109,8 @@ print()
 
 
 # Report and graph...
-final = cost(x, target, low, high, bins)
-end_grad = grad(x, target, low, high, bins)
+final = cost(x, target, low, high)
+end_grad = grad(x, target, low, high)
 px = orogram(x, low, high, bins)
 
 print(f'final kl = {final:.3f}')
