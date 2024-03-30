@@ -91,9 +91,9 @@ plt.savefig(f'conform_initial.pdf', bbox_inches='tight')
 
 
 # Use Nesterov to move points to match target distribution...
-stepsize = 0.1
+stepsize = 0.05
 momentum = 0.75
-steps = 512
+steps = 1024*4
 
 ngrad = jnp.zeros(x.shape)
 
