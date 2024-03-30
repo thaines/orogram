@@ -55,7 +55,7 @@ def cost(x, target, low, high, bins):
   delta = spacing(low, high, bins)
   return crossentropy(px, target, delta) - crossentropy(px, px, delta)
 
-grad = jax.grad(cost)
+grad = jax.jit(jax.grad(cost), static_argnames=('bins',))
 
 initial = cost(x, target, low, high, bins)
 print(f'initial kl = {initial:.3f}')
