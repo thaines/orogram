@@ -7,6 +7,7 @@
 
 # Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
+from functools import partial
 import matplotlib.pyplot as plt
 
 import jax
@@ -48,7 +49,7 @@ def error(layers, x, ytrue):
 
 # Initalise model and confirm it doesn't work...
 rng, key = jax.random.split(rng)
-layers = random_init([2,32,32,32,1], key)
+layers = random_init_he([2,32,32,32,1], key)
 
 initial_cost = cost(layers, x, y)
 initial_error = error(layers, x, y)
