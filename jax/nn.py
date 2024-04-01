@@ -36,6 +36,13 @@ def random_init_he(widths, rng):
 
 
 
+def random_init_last(layers, scale, rng):
+  """Assign new weights to the last layer with a uniform draw with the given scale (-scale to +scale). Intended primarily for if you want to initialise close to an identity transform with a tiny scale."""
+  k = max(layers.keys())
+  layers[k] = jax.random.uniform(rng, layers[k].shape, minval=-scale, maxval=scale)
+
+
+
 @jax.jit
 def mlp_relu(layers, vec):
   """A simple neural network with ReLU non-linearities on each layer except the last. The layers parameter is a dictionary where each layer appears as an integer key, starting at 0. The value attached to the key is hence a matrix, such that it multiplies the vector from the previous layer. Appends a constant (value 1) to the vector before sending it into each layer to handle biases. vec is a vector representing a single data point. Obviously all the shapes better line up!"""
