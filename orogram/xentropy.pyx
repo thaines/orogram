@@ -87,10 +87,13 @@ cdef double secxentropy_fast(float p0, float p1, float q0, float q1, double log_
   cdef double qdelta = q1 - q0
   cdef double qsum = q0 + q1
 
-  cdef double inner = qdelta / qsum
+  cdef double inner
   cdef double top = p1*q0*q0 - p0*q1*q1
   
   cdef double ret = -0.5 * (p0*log_q0 + p1*log_q1)
+
+  if qsum<1e-64:
+    return ret
   ret += 0.25 * pdelta * qdelta / qsum
 
   if fabs(qdelta)>1e-5:
@@ -98,6 +101,7 @@ cdef double secxentropy_fast(float p0, float p1, float q0, float q1, double log_
     ret -= top / (qsum * qdelta)
 
   else:
+    inner = qdelta / qsum
     ret += (inner / 3 + inner * inner * inner / 5) * top / (qsum*qsum)
   
   return ret
