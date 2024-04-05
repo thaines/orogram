@@ -26,6 +26,7 @@ def orogram(x, low, high, bins):
   # The change points and the bin that's higher than each data point...
   changepoints = jnp.linspace(low, high, bins)
   above = jnp.digitize(x, changepoints)
+  above = jnp.clip(above, 1, bins-1)
   
   # Weight assigned to above-1 and above...
   delta = spacing(low, high, bins)
@@ -35,6 +36,10 @@ def orogram(x, low, high, bins):
   # Sum to create an orogram...
   density = jnp.bincount(above-1, below_weight, length=bins)
   density += jnp.bincount(above, above_weight, length=bins)
+
+  # Correct for end bins being half the size...
+  density = density.at[0].mul(2)
+  density = density.at[-1].mul(2)
   
   # Normalise to integrate to 1 and return...
   area = 0.5 * (density[:-1] + density[1:]).sum() * (high - low) / (density.shape[0]-1)
@@ -78,3 +83,32 @@ def crossentropy(p, q, delta):
   ret += jax.lax.select(abs_qdelta>1e-5, ret_unstable, ret_approx).sum()
   
   return delta*ret
+
+
+
+@jax.jit
+def crossentropy_safe(p, q, delta):
+  """Same as crossentropy() but it is super safe, as in does everything in a numerically safe but slow way."""
+
+  log_q = jnp.log(jnp.maximum(q,1e-32))
+
+  pdelta = p[1:] - p[:-1]
+  qdelta = q[1:] - q[:-1]
+  qsum = jnp.maximum(q[:-1] + q[1:], 1e-4)
+
+  plog_q = p * log_q
+  ret = -0.5 * (plog_q[:-1] + plog_q[1:]).sum()
+
+  ret += 0.25 * (pdelta * qdelta / qsum).sum()
+
+  inner = qdelta / qsum
+  scales = (p[1:]*jnp.square(q[:-1]) - p[:-1]*jnp.square(q[1:]))  / jnp.square(qsum)
+  for n in range(1, 1024, 2):
+    ret += (scales * jnp.power(inner, n)).sum() / (n + 2)
+
+  return delta*ret
+
+
+
+grad_crossentropy = jax.jit(jax.grad(crossentropy, (0,1)))
+grad_crossentropy_safe = jax.jit(jax.grad(crossentropy_safe, (0,1)))
