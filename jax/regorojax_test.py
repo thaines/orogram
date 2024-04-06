@@ -143,6 +143,7 @@ for name, target in [('A', orogramA), ('B', orogramB), ('C', orogramC), ('D', or
   plt.ylabel(r'$P(x)$')
 
   plt.plot(edges, target)
+  plt.plot([-3, -2.8, -2.8, 2.8, 2.8, 3.0], [0.0,0.0, 1/5.6, 1/5.6, 0.0, 0.0])
 
   for i in range(uniform.shape[0]):
     plt.annotate('', xy=(uniform[i]-dx[i],y[i]), xytext=(uniform[i],y[i]), xycoords='data', textcoords='data', arrowprops=dict(width=0.1, headwidth=2, headlength=2))
