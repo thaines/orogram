@@ -51,37 +51,47 @@ def orogram(x, low, high, bins):
 def crossentropy(p, q, delta):
   """Returns the cross entropy between two regular orograms with aligned and evenly spaced bin centers, given as p and q. delta is the spacing between bins. Will be approximate in some situations, as it dodges around infinities and singularities to remain stable whatever you give it."""
   
+  # First term requires what is effectively the relative area, which is what this represents...
   halved_ends = jnp.ones(p.shape[0])
   halved_ends = halved_ends.at[0].set(0.5)
   halved_ends = halved_ends.at[-1].set(0.5)
-  
-  qsqr = jnp.square(q)
+
+  # Assorted basic terms...
   log_q = jnp.log(jnp.maximum(q,1e-32))
-  
+
   pdelta = p[1:] - p[:-1]
   qdelta = q[1:] - q[:-1]
-  qsum = jnp.maximum(q[:-1] + q[1:], 1e-5)
-  
-  inner = qdelta / qsum
+  qsum = q[:-1] + q[1:]
+
+  qsqr = jnp.square(q)
   top = p[1:]*qsqr[:-1] - p[:-1]*qsqr[1:]
-  
+
+  # Inner term of infinite loop (used elsewhere), done in a stable way, plus variant with extra qsum...
+  notzero = qsum>1e-5
+  qsum_safe = jnp.maximum(qsum, 1e-5)
+  inner = qdelta / qsum_safe #jax.lax.select(notzero, , 0.0)
+  inner_ds2 = qdelta / (jnp.square(qsum_safe)*qsum_safe) #jax.lax.select(notzero, , 0.0)
+
   # Do the stable parts...
   ret = -(halved_ends * p * log_q).sum()
   ret += 0.25 * (pdelta * inner).sum()
-  
+
   # Do the two branches, with stability hacks for the unstable one...
+  ## Unstable but accurate when qdelta is high...
   abs_qdelta = jnp.fabs(qdelta)
   sign_qdelta = -2 * (jnp.signbit(qdelta) - 0.5)
 
-  qdelta_sqr_safe = jnp.maximum(jnp.square(qdelta), 1e-5)
-  qdelta_qsum_safe = sign_qdelta * jnp.maximum(abs_qdelta * qsum, 1e-5)
-  
+  qdelta_sqr_safe = jnp.maximum(jnp.square(qdelta), 1e-10)
+  qdelta_qsum_safe = sign_qdelta * jnp.maximum(abs_qdelta * qsum, 1e-10)
+
   ret_unstable = top * (0.5 * (log_q[1:] - log_q[:-1]) / qdelta_sqr_safe - 1 / qdelta_qsum_safe)
-  ret_approx = (inner / 3 + jnp.square(inner)*inner / 5) * top / jnp.square(qsum)
-  
-  # Select for each segment and sum into the return...
+
+  ## Stable but only accurate when qdelta is low...
+  ret_approx = top * (1 / 3 + jnp.square(inner) / 5) * inner_ds2
+
+  ## Pick the right branch for each and sum in...
   ret += jax.lax.select(abs_qdelta>1e-5, ret_unstable, ret_approx).sum()
-  
+
   return delta*ret
 
 
@@ -94,15 +104,17 @@ def crossentropy_safe(p, q, delta):
 
   pdelta = p[1:] - p[:-1]
   qdelta = q[1:] - q[:-1]
-  qsum = jnp.maximum(q[:-1] + q[1:], 1e-4)
+  qsum = jnp.maximum(q[:-1] + q[1:], 1e-8)
 
   plog_q = p * log_q
   ret = -0.5 * (plog_q[:-1] + plog_q[1:]).sum()
 
   ret += 0.25 * (pdelta * qdelta / qsum).sum()
 
+  # Do this term brute force; isn't great if inner=1 however...
   inner = qdelta / qsum
   scales = (p[1:]*jnp.square(q[:-1]) - p[:-1]*jnp.square(q[1:]))  / jnp.square(qsum)
+
   for n in range(1, 1024, 2):
     ret += (scales * jnp.power(inner, n)).sum() / (n + 2)
 

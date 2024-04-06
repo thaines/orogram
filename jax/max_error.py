@@ -31,7 +31,7 @@ for thing in things:
 
 
 # Grid search for worst mismatch...
-zeroish = 0
+zeroish = 1e-3 # It gets weird at edges - being accurate there isn't worth it.
 resolution = 5
 
 for i, p_area in enumerate(jnp.linspace(zeroish, 1.0-zeroish, resolution)):
@@ -77,9 +77,22 @@ print()
 # Report on worst...
 for thing in things:
   print(f'Worst of {thing}:')
+  print(f'  err = {worst[thing]["err"]}')
   print(f'  p = [{worst[thing]["p"][0]:.4f}, {worst[thing]["p"][1]:.4f}]')
   print(f'  q = [{worst[thing]["q"][0]:.4f}, {worst[thing]["q"][1]:.4f}]')
-  print(f'  err = {worst[thing]["err"]}')
+
+  samples = 1024*1024
+  p = jnp.linspace(worst[thing]["p"][0], worst[thing]["p"][1], samples)
+  q = jnp.linspace(worst[thing]["q"][0], worst[thing]["q"][1], samples)
+  log_q = jnp.log(jnp.maximum(q, 1e-32))
+
+  weight = jnp.ones(samples)
+  weight = weight.at[0].set(0.5)
+  weight = weight.at[-1].set(0.5)
+  weight /= weight.sum()
+
+  numint = -(weight * p * log_q).sum()
+  print(f'  numerical xentropy = {numint}')
 
   print(f'  fast xentropy = {worst[thing]["fast"]}')
   print(f'  safe xentropy = {worst[thing]["safe"]}')

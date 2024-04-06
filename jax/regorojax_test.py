@@ -116,7 +116,7 @@ def cost(x, target, low, high):
   px = orogram(x, low, high, target.shape[0])
 
   delta = spacing(low, high, target.shape[0])
-  return crossentropy_safe(px, target, delta) - crossentropy_safe(px, px, delta)
+  return crossentropy(px, target, delta) - crossentropy(px, px, delta)
 
 grad = jax.jit(jax.grad(cost))
 
