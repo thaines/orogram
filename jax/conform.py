@@ -23,14 +23,14 @@ jax.config.update('jax_debug_nans', True)
 rng = jax.random.key(0)
 
 rng, key = jax.random.split(rng)
-x = jax.random.normal(key, (256,))
+x = jax.random.normal(key, (1024,))
 
 
 
 # Setup and create an initial orogram...
-low = jnp.floor(x.min())
-high = jnp.ceil(x.max())
-bins = int(jnp.sqrt(x.shape[0]))
+low = -3.5
+high = 3.5
+bins = int(jnp.sqrt(2*x.shape[0]))
 delta = spacing(low, high, bins)
 print(f'low = {low:.3f}, high = {high:.3f}, bins = {bins}, delta = {delta:.3f}')
 
@@ -40,7 +40,7 @@ px = orogram(x, low, high, bins)
 
 
 # Generate a target distribution...
-target = jnp.fabs(jnp.sin(jnp.clip(edges * jnp.pi / 3, -3, 3)))
+target = jnp.fabs(jnp.sin(jnp.clip(edges * jnp.pi / 3, -jnp.pi, jnp.pi)))
 area = 0.5*(target[:-1] + target[1:]).sum() * (high - low) / (target.shape[0]+1)
 target /= area
 
@@ -79,9 +79,9 @@ plt.plot(edges, px, label='start pdf')
 plt.plot(edges, target, label='goal pdf')
 
 rng, key = jax.random.split(rng)
-yrand = px.max()*(0.2 + 0.6*jax.random.uniform(key, (64,)))
+yrand = target.max() * (0.15 + 0.7*jax.random.uniform(key, (64,)))
 for i in range(yrand.shape[0]):
-  plt.annotate('', xy=(x[i]-10*initial_grad[i],yrand[i]), xytext=(x[i],yrand[i]), xycoords='data', textcoords='data', arrowprops=dict(width=0.1, headwidth=2, headlength=2))
+  plt.annotate('', xy=(x[i]-100*initial_grad[i],yrand[i]), xytext=(x[i],yrand[i]), xycoords='data', textcoords='data', arrowprops=dict(width=0.1, headwidth=2, headlength=2))
   #plt.arrow(x[i], yrand[i], -initial_grad[i], 0.0, width=0.0005)
 
 plt.legend()
@@ -90,9 +90,9 @@ plt.savefig(f'conform_initial.pdf', bbox_inches='tight')
 
 
 # Use Nesterov to move points to match target distribution...
-stepsize = 0.05
+stepsize = 0.1
 momentum = 0.75
-steps = 1024*4
+steps = 1024*2
 
 ngrad = jnp.zeros(x.shape)
 
@@ -123,7 +123,7 @@ plt.plot(edges, px, label='end pdf')
 plt.plot(edges, target, label='goal pdf')
 
 for i in range(yrand.shape[0]):
-  plt.annotate('', xy=(x[i]-10*end_grad[i],yrand[i]), xytext=(x[i],yrand[i]), xycoords='data', textcoords='data', arrowprops=dict(width=0.1, headwidth=2, headlength=2))
+  plt.annotate('', xy=(x[i]-100*end_grad[i],yrand[i]), xytext=(x[i],yrand[i]), xycoords='data', textcoords='data', arrowprops=dict(width=0.1, headwidth=2, headlength=2))
   #plt.arrow(x[i], yrand[i], -end_grad[i], 0.0, width=0.0005)
 
 plt.legend()
