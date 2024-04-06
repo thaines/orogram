@@ -48,11 +48,19 @@ plt.savefig('regorojax_sweep.pdf', bbox_inches='tight')
 
 
 
-# Function for generating a suitable family of regular orograms...
+# Functions for generating a suitable family of regular orograms...
 def segment(edges, slope):
   ret = jnp.maximum(0.5 + slope * edges, 0)
   ret = ret.at[:edges.shape[0]//4].set(0.0)
   ret = ret.at[(edges.shape[0]*3)//4:].set(0.0)
+
+  area = 0.5 * (ret[:-1] + ret[1:]).sum() * (edges[-1] - edges[0]) / (edges.shape[0]-1)
+
+  return ret / area
+
+
+def clipped_stdgauss(edges):
+  ret = jnp.exp(-0.5*jnp.square(edges)) / jnp.sqrt(2*jnp.pi)
 
   area = 0.5 * (ret[:-1] + ret[1:]).sum() * (edges[-1] - edges[0]) / (edges.shape[0]-1)
 
@@ -64,7 +72,7 @@ def segment(edges, slope):
 orogramA = segment(edges, 0.5)
 orogramB = segment(edges, 0.25)
 orogramC = segment(edges, 0.0)
-orogramD = segment(edges, -0.5)
+orogramD = clipped_stdgauss(edges)
 
 
 
@@ -122,30 +130,9 @@ grad = jax.jit(jax.grad(cost))
 
 
 
-# Helper that shuffles an array so that adjacent points are somewhat distant, to keep the visualisation sensible...
-def spaced(arr, subseq = 7):
-  # Split array into a set of subsequences...
-  seq = []
-  for i in range(subseq):
-    seq.append(arr[i::subseq].copy())
-
-  # Offset subsequences as far as possible...
-  seq = [jnp.roll(s, int(s.shape[0]*i/subseq)) for i, s in enumerate(seq)]
-
-  # Interleave them back together...
-  ret = arr.copy()
-  for i in range(subseq):
-    ret = ret.at[i::subseq].set(seq[i])
-
-  return ret
-
-
-
 # Put an evenly spaced sample of points through and calculate their gradient relative to each distribution, as in the initial gradient of the transform to move them to be a sample from each target distribution...
 uniform = jnp.linspace(-2.8, 2.8, 65)
-#height = spaced(jnp.linspace(0.1, 0.9, 65))
-height = jnp.exp(-jnp.square(uniform + (uniform[1]-uniform[0])/4))
-
+height = 0.2 + 0.6 * 0.5 * (jnp.asin(jnp.sin(uniform * jnp.pi)) * 2 / jnp.pi + 1.0)
 
 for name, target in [('A', orogramA), ('B', orogramB), ('C', orogramC), ('D', orogramD)]:
   dx = grad(uniform, target, low, high)
