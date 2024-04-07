@@ -69,8 +69,8 @@ def crossentropy(p, q, delta):
   # Inner term of infinite loop (used elsewhere), done in a stable way, plus variant with extra qsum...
   notzero = qsum>1e-5
   qsum_safe = jnp.maximum(qsum, 1e-5)
-  inner = qdelta / qsum_safe #jax.lax.select(notzero, , 0.0)
-  inner_ds2 = qdelta / (jnp.square(qsum_safe)*qsum_safe) #jax.lax.select(notzero, , 0.0)
+  inner = qdelta / qsum_safe
+  inner_ds2 = qdelta / (jnp.square(qsum_safe)*qsum_safe)
 
   # Do the stable parts...
   ret = -(halved_ends * p * log_q).sum()
