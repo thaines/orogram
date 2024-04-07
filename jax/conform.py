@@ -71,12 +71,12 @@ for bi in jnp.where(jnp.logical_not(jnp.isfinite(initial_grad)))[0][:3]:
   print(f'  bad at {bi} = {initial_grad[bi]}')
   print(f'    x = {x[bi]:.3f}')
 
-plt.figure(figsize=[6, 3])
+plt.figure(figsize=[5, 2.5])
 plt.xlabel(r'$x$')
 plt.ylabel(r'$P(x)$')
 
-plt.plot(edges, px, label='start pdf')
-plt.plot(edges, target, label='goal pdf')
+plt.plot(edges, px, label='Start', color='C1')
+plt.plot(edges, target, label='Goal', color='C2')
 
 rng, key = jax.random.split(rng)
 yrand = target.max() * (0.15 + 0.7*jax.random.uniform(key, (64,)))
@@ -115,12 +115,12 @@ px = orogram(x, low, high, bins)
 
 print(f'final kl = {final:.3f}')
 
-plt.figure(figsize=[6, 3])
+plt.figure(figsize=[5, 2.5])
 plt.xlabel(r'$x$')
 plt.ylabel(r'$P(x)$')
 
-plt.plot(edges, px, label='end pdf')
-plt.plot(edges, target, label='goal pdf')
+plt.plot(edges, px, label='End', color='C0')
+plt.plot(edges, target, label='Goal', color='C2')
 
 for i in range(yrand.shape[0]):
   plt.annotate('', xy=(x[i]-100*end_grad[i],yrand[i]), xytext=(x[i],yrand[i]), xycoords='data', textcoords='data', arrowprops=dict(width=0.1, headwidth=2, headlength=2))

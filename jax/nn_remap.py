@@ -66,14 +66,14 @@ target /= area
 
 
 # Visualise target alongside input distribution...
-plt.figure(figsize=[8, 3])
-plt.xlabel(r'$z$')
-plt.ylabel(r'$P(z)$')
+plt.figure(figsize=[6, 2.5])
+plt.xlabel(r'$x$')
+plt.ylabel(r'$P(x)$')
 
 gauss = jnp.exp(-0.5*jnp.square(edges)) / jnp.sqrt(2*jnp.pi)
 
-plt.plot(edges, gauss, label='input pdf')
-plt.plot(edges, target, label='output pdf')
+plt.plot(edges, gauss, label='Input', color='C1')
+plt.plot(edges, target, label='Output', color='C2')
 
 plt.legend()
 plt.savefig(f'nn_remap_initial.pdf', bbox_inches='tight')
@@ -140,12 +140,12 @@ tformed = (minibatch + mlp_gauss_dm(layers, minibatch))[:,0]
 print(f'transformed range = [{tformed.min():.1f}, {tformed.max():.1f}]')
 ogram = orogram(tformed, low, high, target.shape[0])
 
-plt.figure(figsize=[8, 3])
-plt.xlabel(r'$z$')
-plt.ylabel(r'$P(z)$')
+plt.figure(figsize=[6, 2.5])
+plt.xlabel(r'$x$')
+plt.ylabel(r'$P(x)$')
 
-plt.plot(edges, ogram, label='transformed pdf')
-plt.plot(edges, target, label='output pdf')
+plt.plot(edges, ogram, label='Transformed', color='C0')
+plt.plot(edges, target, label='Output', color='C2')
 
 plt.legend()
 plt.savefig(f'nn_remap_final.pdf', bbox_inches='tight')

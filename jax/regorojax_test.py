@@ -11,6 +11,7 @@
 
 from functools import partial
 import matplotlib.pyplot as plt
+import matplotlib.patches
 
 import jax
 import jax.numpy as jnp
@@ -138,14 +139,17 @@ for name, target in [('A', orogramA), ('B', orogramB), ('C', orogramC), ('D', or
   dx = grad(uniform, target, low, high)
   y = height * target.max()
 
-  plt.figure(figsize=[6, 3])
+  plt.figure(figsize=[5, 2.5])
   plt.xlabel(r'$x$')
   plt.ylabel(r'$P(x)$')
 
-  plt.plot(edges, target)
-  plt.plot([-3, -2.8, -2.8, 2.8, 2.8, 3.0], [0.0,0.0, 1/5.6, 1/5.6, 0.0, 0.0])
+  plt.plot(edges, target, color='C2', label='$Q(x)$')
+  plt.plot([-3, -2.8, -2.8, 2.8, 2.8, 3.0], [0.0,0.0, 1/5.6, 1/5.6, 0.0, 0.0], label='$P(x)$', color='C1')
 
   for i in range(uniform.shape[0]):
     plt.annotate('', xy=(uniform[i]-dx[i],y[i]), xytext=(uniform[i],y[i]), xycoords='data', textcoords='data', arrowprops=dict(width=0.1, headwidth=2, headlength=2))
 
+  plt.vlines(edges, 0.0, 0.03, colors='k', linewidths=0.5)
+
+  plt.legend(loc='upper left')
   plt.savefig(f'regorojax_{name}.pdf', bbox_inches='tight')
