@@ -140,10 +140,11 @@ tformed = (minibatch + mlp_gauss_dm(layers, minibatch))[:,0]
 print(f'transformed range = [{tformed.min():.1f}, {tformed.max():.1f}]')
 ogram = orogram(tformed, low, high, target.shape[0])
 
-plt.figure(figsize=[6, 2.5])
+plt.figure(figsize=[12, 4])
 plt.xlabel(r'$x$')
 plt.ylabel(r'$P(x)$')
 
+plt.plot(edges, gauss, label='Input', color='C1')
 plt.plot(edges, ogram, label='Transformed', color='C0')
 plt.plot(edges, target, label='Output', color='C2')
 
