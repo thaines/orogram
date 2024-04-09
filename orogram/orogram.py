@@ -101,7 +101,7 @@ class Orogram:
 
 
   @staticmethod
-  def bake(cdf, start, end, resolution = 1024, epsilon = 1e-2, init = 8, maxiter = 128, vectorised = True):
+  def bake_cdf(cdf, start, end, resolution = 1024, epsilon = 1e-2, init = 8, maxiter = 128, vectorised = True):
     """Alternative constructor (static method, returns an Orogram) that bakes a cdf into an Orogram directly. You have to provide a function for evaluating the CDF of that distribution, plus the range to evaluate (it ensures the mass in the range sums to 1). By default it assumes that the CDF functon is vectorised but you can indicate if it is not (vectorised parameter); that will be slow however. This differs from the regular orogram object in that it dynamically distributes bins, i.e. each bin has the same mass in it, to within the given epsilon parameter multiplied by the expected mass within the bin (it defaults to being within 1%). This is done by first initalising the bin centers using a regular orogram, with the given init paramter being a multiplier for resolution to boost the resolution and get a more accurate initialisation. It then does a biased binary search to refine the bin positions until within the tolerance before constructing the orogram. Note that the even() method tests if an orogram is even; this method may not converge to within the given tolerance so it can be used to verify if it has. maxiter is the maximum number of binary search steps to do. Note that if you want an even sampling in x rather than CDF(x) you should just bake a regular orogram then convert it, and that simplifying that will be better if the distribution isn't that smooth."""
 
     # Define the goal, i.e. where the split points should be in terms of the cdf...
@@ -109,7 +109,7 @@ class Orogram:
 
     # Create inital Orogram, with a resolution boost...
     first = RegOrogram((end-start) / (init * (resolution - 1)))
-    first.bake(cdf, start, end, vectorised)
+    first.bake_cdf(cdf, start, end, vectorised)
     
     # Convert splits to bin centers...
     centers = first.invcdf(splits).astype(numpy.float32)

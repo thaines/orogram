@@ -64,7 +64,7 @@ y = sep_pdf(x)
 yc = sep_cdf(x)
 
 base_model = orogram.RegOrogram(0.05)
-base_model.bake(sep_cdf, low, high)
+base_model.bake_cdf(sep_cdf, low, high)
 model = orogram.Orogram(base_model)
 
 plt.figure(figsize=[6, 3])
@@ -104,7 +104,7 @@ for pi in range(params.shape[0]):
   for si in range(samples.shape[0]):
     # Create orogram object with correct sample count from cdf...
     base_model = orogram.RegOrogram((high-low) / (samples[si] - 1))
-    base_model.bake(pcdf, low, high)
+    base_model.bake_cdf(pcdf, low, high)
     model = orogram.Orogram(base_model)
 
     # Calculate entropy both ways...
@@ -112,7 +112,7 @@ for pi in range(params.shape[0]):
     entropy[pi, si] = model.entropy()
     
     # Now do it with a regular spacing in CDF space, for a different result...
-    #model = orogram.Orogram.bake(pcdf, low, high, samples[si])
+    #model = orogram.Orogram.bake_cdf(pcdf, low, high, samples[si])
     #entropy_cdf[pi, si] = model.entropy()
 
 print(f'\r{params.shape[0]} of {params.shape[0]}')

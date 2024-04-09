@@ -29,7 +29,7 @@ print('Standard Gaussian:')
 
 rv = norm(loc=0.0, scale=1.0)
 base_model = orogram.RegOrogram(0.05)
-base_model.bake(rv.cdf, -4.0, 4.0)
+base_model.bake_cdf(rv.cdf, -4.0, 4.0)
 
 model = orogram.Orogram(base_model)
 
@@ -68,12 +68,12 @@ if not os.path.exists('demo_gaussian_street.pdf'):
   for i in range(kl.shape[0]):
     rv_p = norm(loc=mean_p[i], scale=1.0)
     base_model_p = orogram.RegOrogram(0.05)
-    base_model_p.bake(rv_p.cdf, -4.0, 4.0)
+    base_model_p.bake_cdf(rv_p.cdf, -4.0, 4.0)
     model_p = orogram.Orogram(base_model_p)
 
     rv_q = norm(loc=mean_q[i], scale=1.0)
     base_model_q = orogram.RegOrogram(0.05)
-    base_model_q.bake(rv_q.cdf, -4.0, 4.0)
+    base_model_q.bake_cdf(rv_q.cdf, -4.0, 4.0)
     model_q = orogram.Orogram(base_model_q)
 
     kl[i] = model_p.crossentropy(model_q) - model_p.entropy()
@@ -104,7 +104,7 @@ if not os.path.exists('demo_gaussian_street.pdf'):
 # Cross entropy of a square and triangle switching positions, with a Gaussian in the background to avoid infinities — choosen to capture a key advantage of piecewise linear representations when it comes to stepped edges...
 print('Square-triangle dance…')
 slab = orogram.RegOrogram(0.02)
-slab.bake(norm(loc=0.0, scale=1.0).cdf, -2.0, 2.0)
+slab.bake_cdf(norm(loc=0.0, scale=1.0).cdf, -2.0, 2.0)
 
 def generate(t):
   """Generates a mixture of three distributions — a slab, a uniform and a triangle, with t going from 0 to 1 and defining where the uniform and triangle go."""

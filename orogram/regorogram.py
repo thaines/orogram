@@ -132,8 +132,8 @@ class RegOrogram:
     self._cdf = None
   
   
-  def bake(self, cdf, start, end, weight = 1, vectorised = True):
-    """Lets you 'bake' an arbitrary distribution into this representation. You have to provide a function for evaluating the CDF of that distribution, plus the range to evaluate (it ensures the mass in the range sums to 1). By default it assumes that the CDF functon is vectorised but you can indicate it is not (vectorised parameter); that will be slow however. Solves the linear equation so that the areas between the bin centres match the mass of the CDF. Note that baking is additive, so the values will be summed on top of anything already within the model, by default as though this is a single samples worth of evidence, but the 'weight' parameter lets you change that to whatever they want."""
+  def bake_cdf(self, cdf, start, end, weight = 1, vectorised = True):
+    """Lets you 'bake' an arbitrary distribution into this representation, in terms of its cdf. You have to provide a function for evaluating the CDF of that distribution, plus the range to evaluate (it ensures the mass in the range sums to 1). By default it assumes that the CDF functon is vectorised but you can indicate it is not (vectorised parameter); that will be slow however. Solves the linear equation so that the areas between the bin centres match the mass of the CDF. Note that baking is additive, so the values will be summed on top of anything already within the model, by default as though this is a single samples worth of evidence, but the 'weight' parameter lets you change that to whatever they want."""
     
     # Calculate bin range...
     low = int(numpy.floor(start / self._spacing))

@@ -35,7 +35,7 @@ y = pdf(x)
 
 
 # Bake...
-model = orogram.Orogram.bake(cdf, -4, 4, 256)
+model = orogram.Orogram.bake_cdf(cdf, -4, 4, 256)
 
 
 

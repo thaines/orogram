@@ -50,7 +50,7 @@ for pi in range(params.shape[0]):
   # Bake to Orogram...
   pcdf = lambda x: dists.mix4_cdf(x, params[pi,:])
   base_model = orogram.RegOrogram((high-low) / (samples_orogram - 1))
-  base_model.bake(pcdf, low, high)
+  base_model.bake_cdf(pcdf, low, high)
   model = orogram.Orogram(base_model)
 
   # Compare...

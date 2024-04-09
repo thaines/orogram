@@ -128,7 +128,7 @@ if __name__=='__main__':
 
     # Convert cdf to pdf...
     base_model = orogram.RegOrogram(0.05)
-    base_model.bake(cdf, low, high)
+    base_model.bake_cdf(cdf, low, high)
     model = orogram.Orogram(base_model)
 
     # Plot and write graph...

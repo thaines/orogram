@@ -20,7 +20,7 @@ import orogram
 # Construct a test model from a RegOrogram, as that's the usual use case...
 rv = norm(loc=5, scale=0.5)
 base_model = orogram.RegOrogram(0.1)
-base_model.bake(rv.cdf, 0, 10)
+base_model.bake_cdf(rv.cdf, 0, 10)
 
 model = orogram.Orogram(base_model)
 
@@ -90,7 +90,7 @@ print()
 # Need another model to test cross entropy...
 rv = norm(loc=4, scale=2)
 base_model = orogram.RegOrogram(0.1)
-base_model.bake(rv.cdf, -2, 10)
+base_model.bake_cdf(rv.cdf, -2, 10)
 
 model2 = orogram.Orogram(base_model)
 

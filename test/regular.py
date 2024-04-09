@@ -106,8 +106,8 @@ rv1 = norm(loc=-2.5, scale=0.5)
 rv2 = norm(loc=2.5, scale=0.5)
 
 model4 = orogram.RegOrogram(0.1, blocksize=16)
-model4.bake(rv1.cdf, -5, 5, weight=3)
-model4.bake(rv2.cdf, -5, 5, weight=3)
+model4.bake_cdf(rv1.cdf, -5, 5, weight=3)
+model4.bake_cdf(rv2.cdf, -5, 5, weight=3)
 
 model5 = orogram.RegOrogram(0.25, blocksize=24)
 model5.add(model4.draw(1024*4, rng))
