@@ -61,6 +61,7 @@ This object provides the following stable methods/capabilities (other methods ma
 * `.prob(i)` — Given the index of a bin returns the probability at its bin center. Vectorised.
 * `self(x)` — Evaluates the probability at the given x. Vectorised.
 * `.modes()` — Returns an array containing every mode.
+* `.binmodes()` — Returns an array containing the bin index of every mode.
 * `.highest()` — Returns the x with the highest probability.
 * `.binhighest()` — Returns the index of the bin with the highest probability.
 * `.graph(start = None, end = None)` — Convenience method that returns a tuple of `(x, y)` suitable for passing to a graphing tool. Can optionally provide a range.
@@ -77,3 +78,47 @@ This object provides the following stable methods/capabilities (other methods ma
 * `.entropy()` — Calculates the entropy, in nats.
 * `p.crossentropy(q)` — Calculates the cross entropy, `H(p,q)`, in nats.
 * `p.kl(q)` — Calculates the Kullback–Leibler divergence, `KL(p||q)`, in nats.
+
+
+
+## `Orogram`
+
+Supports an orogram with an irregular spacing, i.e. the bin centres can be entirely arbitrary. However, the price paid for this is it's immutable, and hence can't be edited, and only does a normalised distribution, so there is no tracking of how many samples it has seen.
+In other words, `RegOrogram` is designed with data capture in mind and `Orogram` is designed to simple represent a PDF. It gains a speed advantage from this.
+
+This object provides the following stable methods/capabilities (other methods may be available, but are likely to change):
+
+* `Orogram(x, y, cdf = None, norm=True, copy=True)` — Lets you setup the PDF with a simple `x`/`y` pair of 1D arrays. `x` must be increasing. The flags are all for efficiency: `cdf` if you can provide a cdf array, `norm` can be set to `False` if you've provided a normalised distribution, and `copy` can be set to `False` if the object can steal the provided arrays.
+* `Orogram(regular)` — Converts a `RegOrogram` into an `Orogram`.
+* `.even()` — Returns `True` if `bake_cdf()` constructed this `Orogram` to within the given tolerance, `False` otherwise.
+* `Orogram.bake_cdf(cdf, start, end, resolution = 1024, epsilon = 1e-2, init = 8, maxiter = 128, vectorised = True)` — Constructs a new `Orogram` (this is a static method) given a `cdf` function. You also provide the range to evaluate over (`start` and `end`) and how many (evenly spaced in terms of probability mass) samples to use (`resolution`). It uses a binary search to find the right `x` values — see full documentation for details.
+* `.copy()` — Copy constructor. Of questionable value given object is immutable.
+* `sizeof(self)` — Returns how many bytes of memory the object is currently using.
+* `len(self)` — How many bins it has. Can be interpreted as half the parameter count.
+* `.min()` — Minimum `x`.
+* `.max()` — Maximum `x`.
+* `.center(i)` — Converts the index of a bin to the location of it's bin center. Vectorised.
+* `.prob(i)` — Given the index of a bin returns the probability at its bin center. Vectorised.
+* `self(x)` — Evaluates the probability at the given x. Vectorised.
+* `.modes()` — Returns an array containing every mode.
+* `.binmodes()` — Returns an array containing the bin index of every mode.
+* `.highest()` — Returns the x with the highest probability.
+* `.binhighest()` — Returns the index of the bin with the highest probability.
+* `.graph()` — Convenience method that returns a tuple of `(x, y)` suitable for passing to a graphing tool.
+* `.histogram()` — An orogram constructed using the maximum likelihood technique can be interpreted as a histogram with variable bin width; this returns that histogram as the tuple `(edges, weight)` (edges array is one longer, to capture the last edge as well).
+* `Orogram.mixture(orograms, weights)` — Constructs an Orogram (static method) as a mixture of `Orogram`s (also supports RegOrogram`s); you provide one list of `Orogram`s and another list of the respective weights, which will be normalised to sum to one. Note the return will have the union of bin centers of all inputs, which may be a lot.
+* `Orogram.product(orograms)` — Constructs an Orogram (static method) as a product of `Orogram`s (also supports RegOrogram`s). Note the return will have the union of bin centers of all inputs, which may be a lot and that it will raise an error if there is no probability mass.
+* `.clip(low, high)` — Returns a new `Orogram` clipped to the given range. Will raise an error if there is no mass in that range to normalise.
+* `.binclip(low, high)` — Returns a new `Orogram` clipped to the given range, expressed in terms of bin indices.
+* `.cdf(x)` — Evaluates the CDF at any location. Vectorised.
+* `.bincdf(i)` — Evaluates the CDF at an indexed bin's center. Vectorised.
+* `.cdfgraph(start = None, end = None)` — Convenience method that returns a tuple of `(x, y)` suitable for passing to a graphing tool, this time outputting the CDF. Can optionally provide a range.
+* `.invcdf(uni)` — Evaluates the inverse CDF for a value in `[0, 1)`. Vectorised.
+* `.draw(size = None, rng = None)` — Samples from the represented PDF. Can optionally provide a `size` (integer for 1D, or tuple for a nD array) and/or a `rng`, as an object that `numpy.random.default_rng(rng)` knows what to do with.
+* `.median()` — Returns the median.
+* `.var()` — Returns the variance.
+* `.meanvar()` — Returns a tuple of `(mean, variance)`.
+* `.credible(amount = 0.95, tolerance=1e-6)` — Finds the credible interval of the distribution, as in the smallest set of ranges that cover the given amount of probability mass. Returns a list of regions, each represented as `(start, end, mass)`. Tolerance is for the binary search it uses to find the regions.
+* `.entropy()` — Calculates the entropy, in nats.
+* `p.crossentropy(q)` — Calculates the cross entropy, `H(p,q)`, in nats.
+* `p.kl(q)` — Calculates the Kullback–Leibler divergence, `KL(p||q)`, in nat
