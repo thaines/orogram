@@ -2,6 +2,7 @@
 
 rm -R build
 rm -R dist
+rm -R wheelhouse
 rm -R Orogram.egg-info
 
 cd design
