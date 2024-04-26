@@ -9,6 +9,12 @@ This library was created for the paper
 (Published in Transactions on Machine Learning Research (04/2024))
 It would be great to cite this paper if you make use of this code for a publication of your own.
 
+Can be installed with
+```
+pip install orogram
+```
+or you can clone etc. this repo.
+
 The most recent version of this code can be found at [https://github.com/thaines/orogram](https://github.com/thaines/orogram).
 
 
